@@ -2,26 +2,21 @@ package address
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/frankh/rai"
 	"github.com/golang/crypto/blake2b"
-	"math"
-	"runtime"
-	"strings"
 	// We've forked golang's ed25519 implementation
 	// to use blake2b instead of sha3
 	"github.com/frankh/crypto/ed25519"
 )
 
 // xrb uses a non-standard base32 character set.
-const encodeXrb = "13456789abcdefghijkmnopqrstuwxyz"
+const EncodeXrb = "13456789abcdefghijkmnopqrstuwxyz"
 
-var XrbEncoding = base32.NewEncoding(encodeXrb)
+var XrbEncoding = base32.NewEncoding(EncodeXrb)
 
 func reversed(str []byte) (result []byte) {
 	for i := len(str) - 1; i >= 0; i-- {
@@ -68,84 +63,6 @@ func AddressToPub(account rai.Account) (public_key []byte, err error) {
 	}
 
 	return nil, errors.New("Invalid address format")
-}
-
-func IsValidPrefix(prefix string) bool {
-	for _, c := range prefix {
-		if !strings.Contains(encodeXrb, string(c)) {
-			return false
-		}
-	}
-	return true
-}
-
-func EstimatedIterations(prefix string) int {
-	return int(math.Pow(32, float64(len(prefix))) / 2)
-}
-
-func GenerateVanityAddress(prefix string) (string, rai.Account, error) {
-	if !IsValidPrefix(prefix) {
-		return "", "", fmt.Errorf("Invalid character in prefix.")
-	}
-
-	c := make(chan string, 100)
-	progress := make(chan int, 100)
-
-	for i := 0; i < runtime.NumCPU(); i++ {
-		go func(c chan string, progress chan int) {
-			defer func() {
-				recover()
-			}()
-			count := 0
-			for {
-				count += 1
-				if count%(500+i) == 0 {
-					progress <- count
-					count = 0
-				}
-				seed_bytes := make([]byte, 32)
-				rand.Read(seed_bytes)
-				seed := hex.EncodeToString(seed_bytes)
-				pub, _ := KeypairFromSeed(seed, 0)
-				address := string(PubKeyToAddress(pub))
-
-				if address[4] != '1' && address[4] != '3' {
-					c <- seed
-					break
-				}
-
-				if strings.HasPrefix(address[5:], prefix) {
-					c <- seed
-					break
-				}
-			}
-		}(c, progress)
-	}
-
-	go func(progress chan int) {
-		total := 0
-		fmt.Println()
-		for {
-			count, ok := <-progress
-			if !ok {
-				break
-			}
-			total += count
-			fmt.Printf("\033[1A\033[KTried %d (~%.2f%%)\n", total, float64(total)/float64(EstimatedIterations(prefix))*100)
-		}
-	}(progress)
-
-	seed := <-c
-	pub, _ := KeypairFromSeed(seed, 0)
-	address := PubKeyToAddress(pub)
-	if !ValidateAddress(address) {
-		return "", "", fmt.Errorf("Address generated had an invalid checksum! Please create an issue on github.")
-	}
-
-	close(c)
-	close(progress)
-
-	return seed, address, nil
 }
 
 func GetAddressChecksum(pub ed25519.PublicKey) []byte {
