@@ -1,10 +1,11 @@
 package address
 
 import (
+	"github.com/frankh/rai"
 	"testing"
 )
 
-var valid_addresses = []string{
+var valid_addresses = []rai.Account{
 	"xrb_38nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
 	"xrb_1awsn43we17c1oshdru4azeqjz9wii41dy8npubm4rg11so7dx3jtqgoeahy",
 	"xrb_3arg3asgtigae3xckabaaewkx3bzsh7nwz7jkmjos79ihyaxwphhm6qgjps4",
@@ -13,9 +14,12 @@ var valid_addresses = []string{
 	"xrb_1anrzcuwe64rwxzcco8dkhpyxpi8kd7zsjc1oeimpc3ppca4mrjtwnqposrs",
 }
 
-var invalid_addresses = []string{
+var invalid_addresses = []rai.Account{
 	"xrb_38nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r7",
 	"xrc_38nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
+	"xrb38nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
+	"xrb8nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
+	"xrb_8nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
 }
 
 func TestValidateAddress(t *testing.T) {
@@ -36,7 +40,7 @@ func TestKeypairFromSeed(t *testing.T) {
 	seed := "1234567890123456789012345678901234567890123456789012345678901234"
 
 	// Generated from the official RaiBlocks wallet using above seed.
-	expected := map[uint32]string{
+	expected := map[uint32]rai.Account{
 		0: "xrb_3iwi45me3cgo9aza9wx5f7rder37hw11xtc1ek8psqxw5oxb8cujjad6qp9y",
 		1: "xrb_3a9d1h6wt3zp8cqd6dhhgoyizmk1ciemqkrw97ysrphn7anm6xko1wxakaa1",
 		2: "xrb_1dz36wby1azyjgh7t9nopjm3k5rduhmntercoz545my9s8nm7gcuthuq9fmq",
