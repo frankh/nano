@@ -42,3 +42,10 @@ func TestValidateWork(t *testing.T) {
 	}
 
 }
+
+func TestHashOpen(t *testing.T) {
+	live_hash := strings.ToUpper(hex.EncodeToString(live_genesis_block.Hash()))
+	if live_hash != string(LiveGenesisBlockHash) {
+		t.Errorf("Genesis block hash is not correct, expected %s, got %s", LiveGenesisBlockHash, live_hash)
+	}
+}
