@@ -29,8 +29,8 @@ func TestSignMessage(t *testing.T) {
 }
 
 func TestValidateWork(t *testing.T) {
-	live_block_hash, _ := address.AddressToPub(live_genesis_block.Account)
-	live_work_bytes, _ := hex.DecodeString(string(live_genesis_block.Work))
+	live_block_hash, _ := address.AddressToPub(LiveGenesisBlock.Account)
+	live_work_bytes, _ := hex.DecodeString(string(LiveGenesisBlock.Work))
 	live_bad_work, _ := hex.DecodeString("0000000000000000")
 
 	if !ValidateWork(live_block_hash, live_work_bytes) {
@@ -44,7 +44,7 @@ func TestValidateWork(t *testing.T) {
 }
 
 func TestHashOpen(t *testing.T) {
-	live_hash := strings.ToUpper(hex.EncodeToString(live_genesis_block.Hash()))
+	live_hash := strings.ToUpper(hex.EncodeToString(LiveGenesisBlock.Hash()))
 	if live_hash != string(LiveGenesisBlockHash) {
 		t.Errorf("Genesis block hash is not correct, expected %s, got %s", LiveGenesisBlockHash, live_hash)
 	}
