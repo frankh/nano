@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/frankh/rai"
-	"github.com/frankh/rai-vanity/address"
+	"github.com/frankh/rai/address"
+	"github.com/frankh/rai/uint128"
+	"github.com/frankh/rai/utils"
 	"github.com/golang/crypto/blake2b"
 	"strings"
 	// We've forked golang's ed25519 implementation
@@ -46,6 +48,31 @@ type OpenBlock struct {
 	Signature      rai.Signature `json:"signature"`
 }
 
+type SendBlock struct {
+	Type        BlockType       `json:"type"`
+	Previous    rai.BlockHash   `json:"previous"`
+	Balance     uint128.Uint128 `json:"balance"`
+	Destination rai.Account     `json:"destination"`
+	Work        rai.Work        `json:"work"`
+	Signature   rai.Signature   `json:"signature"`
+}
+
+type ReceiveBlock struct {
+	Type      BlockType     `json:"type"`
+	Previous  rai.BlockHash `json:"previous"`
+	Source    rai.BlockHash `json:"source"`
+	Work      rai.Work      `json:"work"`
+	Signature rai.Signature `json:"signature"`
+}
+
+type ChangeBlock struct {
+	Type           BlockType     `json:"type"`
+	Previous       rai.BlockHash `json:"previous"`
+	Representative rai.Account   `json:"representative"`
+	Work           rai.Work      `json:"work"`
+	Signature      rai.Signature `json:"signature"`
+}
+
 type Block struct {
 	Type           BlockType
 	block          interface{}
@@ -54,6 +81,9 @@ type Block struct {
 	Account        rai.Account
 	Work           rai.Work
 	Signature      rai.Signature
+	Previous       rai.BlockHash
+	Balance        uint128.Uint128
+	Destination    rai.Account
 }
 
 func JsonBlock(b []byte) Block {
@@ -78,6 +108,9 @@ func NewBlock(block OpenBlock) Block {
 		block.Account,
 		block.Work,
 		block.Signature,
+		"",
+		uint128.FromInts(0, 0),
+		"",
 	}
 }
 
@@ -86,6 +119,15 @@ func (b Block) Hash() (result []byte) {
 	case Open:
 		block := b.block.(OpenBlock)
 		return HashOpen(block.Source, block.Representative, block.Account)
+	case Send:
+		block := b.block.(SendBlock)
+		return HashSend(block.Previous, block.Destination, block.Balance)
+	case Receive:
+		block := b.block.(ReceiveBlock)
+		return HashReceive(block.Previous, block.Source)
+	case Change:
+		block := b.block.(ChangeBlock)
+		return HashChange(block.Previous, block.Representative)
 	default:
 		panic("Unknown block type! " + b.Type)
 	}
@@ -100,21 +142,44 @@ func SignMessage(private_key string, message []byte) (signature []byte) {
 	return ed25519.Sign(priv, message)
 }
 
-func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Account) (result []byte) {
-	source_bytes, _ := hex.DecodeString(string(source))
-	repr_bytes, _ := address.AddressToPub(representative)
-	account_bytes, _ := address.AddressToPub(account)
-
+func HashBytes(inputs ...[]byte) (result []byte) {
 	hash, err := blake2b.New(32, nil)
 	if err != nil {
 		panic("Unable to create hash")
 	}
 
-	hash.Write(source_bytes)
-	hash.Write(repr_bytes)
-	hash.Write(account_bytes)
+	for _, b := range inputs {
+		hash.Write(b)
+	}
 
 	return hash.Sum(nil)
+}
+
+func HashReceive(previous rai.BlockHash, source rai.BlockHash) (result []byte) {
+	previous_bytes, _ := hex.DecodeString(string(previous))
+	source_bytes, _ := hex.DecodeString(string(source))
+	return HashBytes(previous_bytes, source_bytes)
+}
+
+func HashChange(previous rai.BlockHash, representative rai.Account) (result []byte) {
+	previous_bytes, _ := hex.DecodeString(string(previous))
+	repr_bytes, _ := address.AddressToPub(representative)
+	return HashBytes(previous_bytes, repr_bytes)
+}
+
+func HashSend(previous rai.BlockHash, destination rai.Account, balance uint128.Uint128) (result []byte) {
+	previous_bytes, _ := hex.DecodeString(string(previous))
+	dest_bytes, _ := address.AddressToPub(destination)
+	balance_bytes := balance.GetBytes()
+
+	return HashBytes(previous_bytes, dest_bytes, balance_bytes)
+}
+
+func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Account) (result []byte) {
+	source_bytes, _ := hex.DecodeString(string(source))
+	repr_bytes, _ := address.AddressToPub(representative)
+	account_bytes, _ := address.AddressToPub(account)
+	return HashBytes(source_bytes, repr_bytes, account_bytes)
 }
 
 func ValidateWork(block_hash []byte, work []byte) bool {
@@ -123,11 +188,7 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 		panic("Unable to create hash")
 	}
 
-	// Switch endianness of work byte from big to little
-	work_int := binary.BigEndian.Uint64(work)
-	binary.LittleEndian.PutUint64(work, work_int)
-
-	hash.Write(work)
+	hash.Write(utils.Reversed(work))
 	hash.Write(block_hash)
 
 	work_value := hash.Sum(nil)

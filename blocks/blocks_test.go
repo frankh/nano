@@ -2,7 +2,7 @@ package blocks
 
 import (
 	"encoding/hex"
-	"github.com/frankh/rai-vanity/address"
+	"github.com/frankh/rai/address"
 	"strings"
 	"testing"
 )

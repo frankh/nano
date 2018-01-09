@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/frankh/rai"
+	"github.com/frankh/rai/utils"
 	"github.com/golang/crypto/blake2b"
 	// We've forked golang's ed25519 implementation
 	// to use blake2b instead of sha3
@@ -17,13 +18,6 @@ import (
 const EncodeXrb = "13456789abcdefghijkmnopqrstuwxyz"
 
 var XrbEncoding = base32.NewEncoding(EncodeXrb)
-
-func reversed(str []byte) (result []byte) {
-	for i := len(str) - 1; i >= 0; i-- {
-		result = append(result, str[i])
-	}
-	return result
-}
 
 func ValidateAddress(account rai.Account) bool {
 	_, err := AddressToPub(account)
@@ -72,7 +66,7 @@ func GetAddressChecksum(pub ed25519.PublicKey) []byte {
 	}
 
 	hash.Write(pub)
-	return reversed(hash.Sum(nil))
+	return utils.Reversed(hash.Sum(nil))
 }
 
 func PubKeyToAddress(pub ed25519.PublicKey) rai.Account {
