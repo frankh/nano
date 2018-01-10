@@ -2,9 +2,64 @@ package storage
 
 import (
 	"database/sql"
+	"github.com/frankh/rai"
 	"github.com/frankh/rai/blocks"
+	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type Block interface {
+	Type() blocks.BlockType
+	GetBalance() uint128.Uint128
+	Hash() rai.BlockHash
+}
+
+type OpenBlock struct {
+	Source         SendBlock
+	Representative rai.Account
+	Account        rai.Account
+	Work           rai.Work
+	Signature      rai.Signature
+}
+
+type SendBlock struct {
+	Previous    Block
+	Balance     uint128.Uint128
+	Destination rai.Account
+	Work        rai.Work
+	Signature   rai.Signature
+}
+
+type ReceiveBlock struct {
+	Previous  Block
+	Source    SendBlock
+	Work      rai.Work
+	Signature rai.Signature
+}
+
+type ChangeBlock struct {
+	Previous       Block
+	Representative rai.Account
+	Work           rai.Work
+	Signature      rai.Signature
+}
+
+func (b *OpenBlock) GetBalance() uint128.Uint128 {
+	return b.Source.Previous.GetBalance().Sub(b.Source.GetBalance())
+}
+
+func (b *SendBlock) GetBalance() uint128.Uint128 {
+	return b.Balance
+}
+
+func (b *ReceiveBlock) GetBalance() uint128.Uint128 {
+	received := b.Source.Previous.GetBalance().Sub(b.Source.GetBalance())
+	return b.Previous.GetBalance().Add(received)
+}
+
+func (b *ChangeBlock) GetBalance() uint128.Uint128 {
+	return b.Previous.GetBalance()
+}
 
 var Conn *sql.DB
 
@@ -58,7 +113,7 @@ func Init(path string) {
 
 }
 
-func StoreBlock(b blocks.Block) {
+func StoreBlock(b blocks.RawBlock) {
 	switch b.Type {
 	case blocks.Open:
 		prep, err := Conn.Prepare(`

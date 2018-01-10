@@ -37,47 +37,8 @@ const (
 	Change            = "change"
 )
 
-type JustType struct {
-	Type BlockType `json:"type"`
-}
-
-type OpenBlock struct {
-	Type           BlockType     `json:"type"`
-	Source         rai.BlockHash `json:"source"`
-	Representative rai.Account   `json:"representative"`
-	Account        rai.Account   `json:"account"`
-	Work           rai.Work      `json:"work"`
-	Signature      rai.Signature `json:"signature"`
-}
-
-type SendBlock struct {
-	Type        BlockType       `json:"type"`
-	Previous    rai.BlockHash   `json:"previous"`
-	Balance     uint128.Uint128 `json:"balance"`
-	Destination rai.Account     `json:"destination"`
-	Work        rai.Work        `json:"work"`
-	Signature   rai.Signature   `json:"signature"`
-}
-
-type ReceiveBlock struct {
-	Type      BlockType     `json:"type"`
-	Previous  rai.BlockHash `json:"previous"`
-	Source    rai.BlockHash `json:"source"`
-	Work      rai.Work      `json:"work"`
-	Signature rai.Signature `json:"signature"`
-}
-
-type ChangeBlock struct {
-	Type           BlockType     `json:"type"`
-	Previous       rai.BlockHash `json:"previous"`
-	Representative rai.Account   `json:"representative"`
-	Work           rai.Work      `json:"work"`
-	Signature      rai.Signature `json:"signature"`
-}
-
-type Block struct {
+type RawBlock struct {
 	Type           BlockType
-	block          interface{}
 	Source         rai.BlockHash
 	Representative rai.Account
 	Account        rai.Account
@@ -88,54 +49,42 @@ type Block struct {
 	Destination    rai.Account
 }
 
-func JsonBlock(b []byte) Block {
-	var t JustType
-	json.Unmarshal(b, &t)
-	switch t.Type {
-	case Open:
-		var o OpenBlock
-		json.Unmarshal(b, &o)
-		return NewBlock(o)
-	default:
-		panic("Unknown block type! " + t.Type)
+func NewSendBlock(previous rai.BlockHash, balance uint128.Uint128, destination rai.Account) RawBlock {
+	return RawBlock{
+		Send,              // Type
+		rai.BlockHash(""), // Source
+		rai.Account(""),   // Representative
+		rai.Account(""),   // Account
+		rai.Work(""),      // Work
+		rai.Signature(""), // Signature
+		previous,          // Previous
+		balance,           // Balance
+		destination,       // Destination
 	}
 }
 
-func NewBlock(block OpenBlock) Block {
-	return Block{
-		Open,
-		block,
-		block.Source,
-		block.Representative,
-		block.Account,
-		block.Work,
-		block.Signature,
-		"",
-		uint128.FromInts(0, 0),
-		"",
-	}
+func JsonBlock(b []byte) RawBlock {
+	var block RawBlock
+	json.Unmarshal(b, &block)
+	return block
 }
 
-func (b Block) Hash() (result []byte) {
+func (b RawBlock) Hash() (result []byte) {
 	switch b.Type {
 	case Open:
-		block := b.block.(OpenBlock)
-		return HashOpen(block.Source, block.Representative, block.Account)
+		return HashOpen(b.Source, b.Representative, b.Account)
 	case Send:
-		block := b.block.(SendBlock)
-		return HashSend(block.Previous, block.Destination, block.Balance)
+		return HashSend(b.Previous, b.Destination, b.Balance)
 	case Receive:
-		block := b.block.(ReceiveBlock)
-		return HashReceive(block.Previous, block.Source)
+		return HashReceive(b.Previous, b.Source)
 	case Change:
-		block := b.block.(ChangeBlock)
-		return HashChange(block.Previous, block.Representative)
+		return HashChange(b.Previous, b.Representative)
 	default:
 		panic("Unknown block type! " + b.Type)
 	}
 }
 
-func (b Block) HashToString() (result rai.BlockHash) {
+func (b RawBlock) HashToString() (result rai.BlockHash) {
 	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(b.Hash())))
 }
 

@@ -59,19 +59,18 @@ func (u Uint128) Compare(o Uint128) int {
 }
 
 // Add returns a new Uint128 incremented by n.
-func (u Uint128) Add(n uint64) Uint128 {
-	lo := u.Lo + n
-	hi := u.Hi
+func (u Uint128) Add(n Uint128) Uint128 {
+	lo := u.Lo + n.Lo
+	hi := u.Hi + n.Hi
 	if u.Lo > lo {
 		hi++
 	}
 	return Uint128{hi, lo}
 }
 
-// Sub returns a new Uint128 decremented by n.
-func (u Uint128) Sub(n uint64) Uint128 {
-	lo := u.Lo - n
-	hi := u.Hi
+func (u Uint128) Sub(n Uint128) Uint128 {
+	lo := u.Lo - n.Lo
+	hi := u.Hi - n.Hi
 	if u.Lo < lo {
 		hi--
 	}
