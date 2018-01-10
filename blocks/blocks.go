@@ -20,14 +20,14 @@ const LiveGenesisSourceHash rai.BlockHash = "E89208DD038FBB269987689621D52292AE9
 
 var LiveGenesisAmount uint128.Uint128 = uint128.FromInts(0xffffffffffffffff, 0xffffffffffffffff)
 
-var LiveGenesisBlock = JsonBlock([]byte(`{
+var LiveGenesisBlock = FromJson([]byte(`{
 	"type":           "open",
 	"source":         "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA",
 	"representative": "xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3",
 	"account":        "xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3",
 	"work":           "62f05417dd3fb691",
 	"signature":      "9F0C933C8ADE004D808EA1985FA746A7E95BA2A38F867640F53EC8F180BDFE9E2C1268DEAD7C2664F356E37ABA362BC58E46DBA03E523A7B5A19E4B6EB12BB02"
-}`))
+}`)).(*OpenBlock)
 
 const publish_threshold = 0xffffffc000000000
 
@@ -39,6 +39,100 @@ const (
 	Send              = "send"
 	Change            = "change"
 )
+
+type Block interface {
+	Type() BlockType
+	GetBalance() uint128.Uint128
+	GetSignature() rai.Signature
+	Hash() rai.BlockHash
+}
+
+type CommonBlock struct {
+	Work      rai.Work
+	Signature rai.Signature
+}
+
+type OpenBlock struct {
+	SourceHash     rai.BlockHash
+	Representative rai.Account
+	Account        rai.Account
+	CommonBlock
+}
+
+type SendBlock struct {
+	PreviousHash rai.BlockHash
+	Balance      uint128.Uint128
+	Destination  rai.Account
+	CommonBlock
+}
+
+type ReceiveBlock struct {
+	PreviousHash rai.BlockHash
+	SourceHash   rai.BlockHash
+	CommonBlock
+}
+
+type ChangeBlock struct {
+	PreviousHash   rai.BlockHash
+	Representative rai.Account
+	CommonBlock
+}
+
+func (b *OpenBlock) Hash() rai.BlockHash {
+	return rai.BlockHashFromBytes(HashOpen(b.SourceHash, b.Representative, b.Account))
+}
+
+func (b *ReceiveBlock) Hash() rai.BlockHash {
+	return rai.BlockHashFromBytes(HashReceive(b.PreviousHash, b.SourceHash))
+}
+
+func (b *ChangeBlock) Hash() rai.BlockHash {
+	return rai.BlockHashFromBytes(HashChange(b.PreviousHash, b.Representative))
+}
+
+func (b *SendBlock) Hash() rai.BlockHash {
+	return rai.BlockHashFromBytes(HashSend(b.PreviousHash, b.Destination, b.Balance))
+}
+
+func (b *OpenBlock) Source() *SendBlock {
+	return FetchBlock(b.SourceHash).(*SendBlock)
+}
+
+func (b *ReceiveBlock) Source() *SendBlock {
+	return FetchBlock(b.SourceHash).(*SendBlock)
+}
+
+func (b *ReceiveBlock) Previous() Block {
+	return FetchBlock(b.PreviousHash)
+}
+
+func (b *ChangeBlock) Previous() Block {
+	return FetchBlock(b.PreviousHash)
+}
+
+func (b *SendBlock) Previous() Block {
+	return FetchBlock(b.PreviousHash)
+}
+
+func (b *CommonBlock) GetSignature() rai.Signature {
+	return b.Signature
+}
+
+func (*SendBlock) Type() BlockType {
+	return Send
+}
+
+func (*OpenBlock) Type() BlockType {
+	return Open
+}
+
+func (*ChangeBlock) Type() BlockType {
+	return Change
+}
+
+func (*ReceiveBlock) Type() BlockType {
+	return Receive
+}
 
 type RawBlock struct {
 	Type           BlockType
@@ -66,10 +160,51 @@ func NewSendBlock(previous rai.BlockHash, balance uint128.Uint128, destination r
 	}
 }
 
-func JsonBlock(b []byte) RawBlock {
-	var block RawBlock
-	json.Unmarshal(b, &block)
+func FromJson(b []byte) (block Block) {
+	var raw RawBlock
+	json.Unmarshal(b, &raw)
+	common := CommonBlock{
+		raw.Work,
+		raw.Signature,
+	}
+
+	switch raw.Type {
+	case Open:
+		b := OpenBlock{
+			raw.Source,
+			raw.Representative,
+			raw.Account,
+			common,
+		}
+		block = &b
+	case Send:
+		b := SendBlock{
+			raw.Previous,
+			raw.Balance,
+			raw.Destination,
+			common,
+		}
+		block = &b
+	case Receive:
+		b := ReceiveBlock{
+			raw.Previous,
+			raw.Source,
+			common,
+		}
+		block = &b
+	case Change:
+		b := ChangeBlock{
+			raw.Previous,
+			raw.Representative,
+			common,
+		}
+		block = &b
+	default:
+		panic("Unknown block type")
+	}
+
 	return block
+
 }
 
 func (b RawBlock) Hash() (result []byte) {

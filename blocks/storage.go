@@ -1,86 +1,11 @@
-package storage
+package blocks
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"github.com/frankh/rai"
-	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
-	"strings"
 )
-
-type Block interface {
-	// Type() blocks.BlockType
-	GetBalance() uint128.Uint128
-	Hash() rai.BlockHash
-}
-
-type OpenBlock struct {
-	SourceHash     rai.BlockHash
-	Representative rai.Account
-	Account        rai.Account
-	Work           rai.Work
-	Signature      rai.Signature
-}
-
-type SendBlock struct {
-	PreviousHash rai.BlockHash
-	Balance      uint128.Uint128
-	Destination  rai.Account
-	Work         rai.Work
-	Signature    rai.Signature
-}
-
-type ReceiveBlock struct {
-	PreviousHash rai.BlockHash
-	SourceHash   rai.BlockHash
-	Work         rai.Work
-	Signature    rai.Signature
-}
-
-type ChangeBlock struct {
-	PreviousHash   rai.BlockHash
-	Representative rai.Account
-	Work           rai.Work
-	Signature      rai.Signature
-}
-
-func (b *OpenBlock) Hash() rai.BlockHash {
-	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashOpen(b.SourceHash, b.Representative, b.Account))))
-}
-
-func (b *ReceiveBlock) Hash() rai.BlockHash {
-	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashReceive(b.PreviousHash, b.SourceHash))))
-}
-
-func (b *ChangeBlock) Hash() rai.BlockHash {
-	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashChange(b.PreviousHash, b.Representative))))
-}
-
-func (b *SendBlock) Hash() rai.BlockHash {
-	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashSend(b.PreviousHash, b.Destination, b.Balance))))
-}
-
-func (b *OpenBlock) Source() *SendBlock {
-	return FetchBlock(b.SourceHash).(*SendBlock)
-}
-
-func (b *ReceiveBlock) Source() *SendBlock {
-	return FetchBlock(b.SourceHash).(*SendBlock)
-}
-
-func (b *ReceiveBlock) Previous() Block {
-	return FetchBlock(b.PreviousHash)
-}
-
-func (b *ChangeBlock) Previous() Block {
-	return FetchBlock(b.PreviousHash)
-}
-
-func (b *SendBlock) Previous() Block {
-	return FetchBlock(b.PreviousHash)
-}
 
 func FetchBlock(hash rai.BlockHash) (b Block) {
 	if Conn == nil {
@@ -107,7 +32,7 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 		return nil
 	}
 
-	var block_type blocks.BlockType
+	var block_type BlockType
 	var source rai.BlockHash
 	var representative rai.Account
 	var account rai.Account
@@ -133,14 +58,18 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 		panic(err)
 	}
 
+	common := CommonBlock{
+		work,
+		signature,
+	}
+
 	switch block_type {
-	case blocks.Open:
+	case Open:
 		block := OpenBlock{
 			source,
 			representative,
 			account,
-			work,
-			signature,
+			common,
 		}
 		return &block
 	default:
@@ -150,8 +79,8 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 }
 
 func (b *OpenBlock) GetBalance() uint128.Uint128 {
-	if b.SourceHash == blocks.LiveGenesisSourceHash {
-		return blocks.LiveGenesisAmount
+	if b.SourceHash == LiveGenesisSourceHash {
+		return LiveGenesisAmount
 	}
 
 	return b.Source().Previous().GetBalance().Sub(b.Source().GetBalance())
@@ -212,19 +141,19 @@ func Init(path string) {
 		}
 	}
 
-	rows, err := Conn.Query(`SELECT hash FROM block WHERE hash=?`, blocks.LiveGenesisBlockHash)
+	rows, err := Conn.Query(`SELECT hash FROM block WHERE hash=?`, LiveGenesisBlockHash)
 	if err != nil {
 		panic(err)
 	}
 	if !rows.Next() {
-		StoreBlock(blocks.LiveGenesisBlock)
+		StoreBlock(LiveGenesisBlock)
 	}
 
 }
 
-func StoreBlock(b blocks.RawBlock) {
-	switch b.Type {
-	case blocks.Open:
+func StoreBlock(block Block) {
+	switch block.Type() {
+	case Open:
 		prep, err := Conn.Prepare(`
       INSERT INTO block (
         hash,
@@ -249,9 +178,11 @@ func StoreBlock(b blocks.RawBlock) {
 			panic(err)
 		}
 
+		b := block.(*OpenBlock)
+
 		_, err = prep.Exec(
-			b.HashToString(),
-			b.Source,
+			b.Hash(),
+			b.SourceHash,
 			b.Representative,
 			b.Account,
 			b.Work,

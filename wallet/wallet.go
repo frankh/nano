@@ -4,7 +4,6 @@ import (
 	"github.com/frankh/crypto/ed25519"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/blocks"
-	"github.com/frankh/rai/storage"
 	"github.com/frankh/rai/uint128"
 	"github.com/pkg/errors"
 )
@@ -12,7 +11,7 @@ import (
 type Wallet struct {
 	privateKey ed25519.PrivateKey
 	PublicKey  ed25519.PublicKey
-	Head       storage.Block
+	Head       blocks.Block
 }
 
 func (w *Wallet) GetBalance() uint128.Uint128 {

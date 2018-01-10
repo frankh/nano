@@ -1,7 +1,6 @@
-package storage
+package blocks
 
 import (
-	"github.com/frankh/rai/blocks"
 	"testing"
 )
 
@@ -13,7 +12,7 @@ func TestInit(t *testing.T) {
 func TestGenesisBalance(t *testing.T) {
 	Init(":memory:")
 
-	block := FetchBlock(blocks.LiveGenesisBlockHash)
+	block := FetchBlock(LiveGenesisBlockHash)
 
 	if block.GetBalance().String() != "ffffffffffffffffffffffffffffffff" {
 		t.Errorf("Genesis block has invalid initial balance")
