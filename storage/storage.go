@@ -2,20 +2,22 @@ package storage
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
+	"strings"
 )
 
 type Block interface {
-	Type() blocks.BlockType
+	// Type() blocks.BlockType
 	GetBalance() uint128.Uint128
 	Hash() rai.BlockHash
 }
 
 type OpenBlock struct {
-	Source         SendBlock
+	SourceHash     rai.BlockHash
 	Representative rai.Account
 	Account        rai.Account
 	Work           rai.Work
@@ -23,29 +25,136 @@ type OpenBlock struct {
 }
 
 type SendBlock struct {
-	Previous    Block
-	Balance     uint128.Uint128
-	Destination rai.Account
-	Work        rai.Work
-	Signature   rai.Signature
+	PreviousHash rai.BlockHash
+	Balance      uint128.Uint128
+	Destination  rai.Account
+	Work         rai.Work
+	Signature    rai.Signature
 }
 
 type ReceiveBlock struct {
-	Previous  Block
-	Source    SendBlock
-	Work      rai.Work
-	Signature rai.Signature
+	PreviousHash rai.BlockHash
+	SourceHash   rai.BlockHash
+	Work         rai.Work
+	Signature    rai.Signature
 }
 
 type ChangeBlock struct {
-	Previous       Block
+	PreviousHash   rai.BlockHash
 	Representative rai.Account
 	Work           rai.Work
 	Signature      rai.Signature
 }
 
+func (b *OpenBlock) Hash() rai.BlockHash {
+	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashOpen(b.SourceHash, b.Representative, b.Account))))
+}
+
+func (b *ReceiveBlock) Hash() rai.BlockHash {
+	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashReceive(b.PreviousHash, b.SourceHash))))
+}
+
+func (b *ChangeBlock) Hash() rai.BlockHash {
+	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashChange(b.PreviousHash, b.Representative))))
+}
+
+func (b *SendBlock) Hash() rai.BlockHash {
+	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(blocks.HashSend(b.PreviousHash, b.Destination, b.Balance))))
+}
+
+func (b *OpenBlock) Source() *SendBlock {
+	return FetchBlock(b.SourceHash).(*SendBlock)
+}
+
+func (b *ReceiveBlock) Source() *SendBlock {
+	return FetchBlock(b.SourceHash).(*SendBlock)
+}
+
+func (b *ReceiveBlock) Previous() Block {
+	return FetchBlock(b.PreviousHash)
+}
+
+func (b *ChangeBlock) Previous() Block {
+	return FetchBlock(b.PreviousHash)
+}
+
+func (b *SendBlock) Previous() Block {
+	return FetchBlock(b.PreviousHash)
+}
+
+func FetchBlock(hash rai.BlockHash) (b Block) {
+	if Conn == nil {
+		panic("Database connection not initialised")
+	}
+
+	rows, err := Conn.Query(`SELECT
+    type,
+    source,
+    representative,
+    account,
+    work,
+    signature,
+    previous,
+    balance,
+    destination
+  FROM block WHERE hash=?`, hash)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !rows.Next() {
+		return nil
+	}
+
+	var block_type blocks.BlockType
+	var source rai.BlockHash
+	var representative rai.Account
+	var account rai.Account
+	var work rai.Work
+	var signature rai.Signature
+	var previous rai.BlockHash
+	var balance string
+	var destination rai.Account
+
+	err = rows.Scan(
+		&block_type,
+		&source,
+		&representative,
+		&account,
+		&work,
+		&signature,
+		&previous,
+		&balance,
+		&destination,
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	switch block_type {
+	case blocks.Open:
+		block := OpenBlock{
+			source,
+			representative,
+			account,
+			work,
+			signature,
+		}
+		return &block
+	default:
+		panic("Unknown block type")
+	}
+
+}
+
 func (b *OpenBlock) GetBalance() uint128.Uint128 {
-	return b.Source.Previous.GetBalance().Sub(b.Source.GetBalance())
+	if b.SourceHash == blocks.LiveGenesisSourceHash {
+		return blocks.LiveGenesisAmount
+	}
+
+	return b.Source().Previous().GetBalance().Sub(b.Source().GetBalance())
 }
 
 func (b *SendBlock) GetBalance() uint128.Uint128 {
@@ -53,12 +162,12 @@ func (b *SendBlock) GetBalance() uint128.Uint128 {
 }
 
 func (b *ReceiveBlock) GetBalance() uint128.Uint128 {
-	received := b.Source.Previous.GetBalance().Sub(b.Source.GetBalance())
-	return b.Previous.GetBalance().Add(received)
+	received := b.Source().Previous().GetBalance().Sub(b.Source().GetBalance())
+	return b.Previous().GetBalance().Add(received)
 }
 
 func (b *ChangeBlock) GetBalance() uint128.Uint128 {
-	return b.Previous.GetBalance()
+	return b.Previous().GetBalance()
 }
 
 var Conn *sql.DB
@@ -81,14 +190,14 @@ func Init(path string) {
       CREATE TABLE 'block' (
         'hash' TEXT PRIMARY KEY,
         'type' TEXT NOT NULL,
-        'account' TEXT NULL,
-        'source' TEXT NULL,
-        'representative' TEXT NULL,
-        'previous' TEXT NULL,
-        'balance' TEXT NULL,
-        'destination' TEXT NULL,
-        'work' TEXT NULL,
-        'signature' VARCHAR(64) NULL,
+        'account' TEXT NOT NULL DEFAULT(''),
+        'source' TEXT NOT NULL DEFAULT(''),
+        'representative' TEXT NOT NULL DEFAULT(''),
+        'previous' TEXT NOT NULL DEFAULT(''),
+        'balance' TEXT NOT NULL DEFAULT(''),
+        'destination' TEXT NOT NULL DEFAULT(''),
+        'work' TEXT NOT NULL DEFAULT(''),
+        'signature' TEXT NOT NULL DEFAULT(''),
         'created' DATE DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY(previous) REFERENCES block(hash)
       )
