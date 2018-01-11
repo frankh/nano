@@ -3,6 +3,7 @@ package wallet
 import (
 	"github.com/frankh/crypto/ed25519"
 	"github.com/frankh/rai"
+	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
 	"github.com/pkg/errors"
@@ -12,6 +13,15 @@ type Wallet struct {
 	privateKey ed25519.PrivateKey
 	PublicKey  ed25519.PublicKey
 	Head       blocks.Block
+}
+
+func New(private string) (w Wallet) {
+	w.PublicKey, w.privateKey = address.KeypairFromPrivateKey(private)
+	account := address.PubKeyToAddress(w.PublicKey)
+
+	w.Head = blocks.FetchOpen(account)
+
+	return w
 }
 
 func (w *Wallet) GetBalance() uint128.Uint128 {

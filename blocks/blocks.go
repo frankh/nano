@@ -18,7 +18,18 @@ import (
 const LiveGenesisBlockHash rai.BlockHash = "991CF190094C00F0B68E2E5F75F6BEE95A2E0BD93CEAA4A6734DB9F19B728948"
 const LiveGenesisSourceHash rai.BlockHash = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"
 
-var LiveGenesisAmount uint128.Uint128 = uint128.FromInts(0xffffffffffffffff, 0xffffffffffffffff)
+var GenesisAmount uint128.Uint128 = uint128.FromInts(0xffffffffffffffff, 0xffffffffffffffff)
+
+const TestPrivateKey string = "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4"
+
+var TestGenesisBlock = FromJson([]byte(`{
+	"type": "open",
+	"source": "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0",
+	"representative": "xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo",
+	"account": "xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo",
+	"work": "9680625b39d3363d",
+	"signature": "ECDA914373A2F0CA1296475BAEE40500A7F0A7AD72A5A80C81D7FAB7F6C802B2CC7DB50F5DD0FB25B2EF11761FA7344A158DD5A700B21BD47DE5BD0F63153A02"
+}`)).(*OpenBlock)
 
 var LiveGenesisBlock = FromJson([]byte(`{
 	"type":           "open",
@@ -28,6 +39,11 @@ var LiveGenesisBlock = FromJson([]byte(`{
 	"work":           "62f05417dd3fb691",
 	"signature":      "9F0C933C8ADE004D808EA1985FA746A7E95BA2A38F867640F53EC8F180BDFE9E2C1268DEAD7C2664F356E37ABA362BC58E46DBA03E523A7B5A19E4B6EB12BB02"
 }`)).(*OpenBlock)
+
+var LiveConfig = Config{
+	"db.sqlite",
+	LiveGenesisBlock,
+}
 
 const publish_threshold = 0xffffffc000000000
 

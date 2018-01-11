@@ -7,6 +7,39 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type Config struct {
+	Path         string
+	GenesisBlock *OpenBlock
+}
+
+func FetchOpen(account rai.Account) (b *OpenBlock) {
+	if Conn == nil {
+		panic("Database connection not initialised")
+	}
+
+	rows, err := Conn.Query(`SELECT
+    type,
+    source,
+    representative,
+    account,
+    work,
+    signature,
+    previous,
+    balance,
+    destination
+  FROM block WHERE type=? and account=?`, Open, account)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !rows.Next() {
+		return nil
+	}
+
+	return blockFromRow(rows).(*OpenBlock)
+}
+
 func FetchBlock(hash rai.BlockHash) (b Block) {
 	if Conn == nil {
 		panic("Database connection not initialised")
@@ -32,6 +65,10 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 		return nil
 	}
 
+	return blockFromRow(rows)
+}
+
+func blockFromRow(rows *sql.Rows) (b Block) {
 	var block_type BlockType
 	var source rai.BlockHash
 	var representative rai.Account
@@ -42,7 +79,7 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 	var balance string
 	var destination rai.Account
 
-	err = rows.Scan(
+	err := rows.Scan(
 		&block_type,
 		&source,
 		&representative,
@@ -75,12 +112,11 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 	default:
 		panic("Unknown block type")
 	}
-
 }
 
 func (b *OpenBlock) GetBalance() uint128.Uint128 {
-	if b.SourceHash == LiveGenesisSourceHash {
-		return LiveGenesisAmount
+	if b.SourceHash == Conf.GenesisBlock.SourceHash {
+		return GenesisAmount
 	}
 
 	return b.Source().Previous().GetBalance().Sub(b.Source().GetBalance())
@@ -100,11 +136,13 @@ func (b *ChangeBlock) GetBalance() uint128.Uint128 {
 }
 
 var Conn *sql.DB
+var Conf Config
 
-func Init(path string) {
+func Init(config Config) {
 	var err error
 
-	Conn, err = sql.Open("sqlite3", path)
+	Conf = config
+	Conn, err = sql.Open("sqlite3", config.Path)
 	if err != nil {
 		panic(err)
 	}
@@ -129,7 +167,9 @@ func Init(path string) {
         'signature' TEXT NOT NULL DEFAULT(''),
         'created' DATE DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY(previous) REFERENCES block(hash)
-      )
+      );
+      CREATE INDEX account_index ON block(account);
+      CREATE INDEX type_index ON block(type);
     `)
 		if err != nil {
 			panic(err)
@@ -146,7 +186,7 @@ func Init(path string) {
 		panic(err)
 	}
 	if !rows.Next() {
-		StoreBlock(LiveGenesisBlock)
+		StoreBlock(config.GenesisBlock)
 	}
 
 }
