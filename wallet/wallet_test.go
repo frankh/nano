@@ -8,7 +8,7 @@ import (
 var TestConfigTest = blocks.Config{
 	":memory:",
 	blocks.TestGenesisBlock,
-	0xfffffff000000000,
+	0xff00000000000000,
 }
 var TestConfigLive = blocks.Config{
 	":memory:",
@@ -43,4 +43,10 @@ func TestPoW(t *testing.T) {
 	}
 
 	w.WaitPoW()
+	w.Head.(*blocks.OpenBlock).Work = *w.Work
+
+	if !blocks.ValidateBlockWork(w.Head) {
+		t.Errorf("Pow was invalid")
+	}
+
 }

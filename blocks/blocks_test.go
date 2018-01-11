@@ -64,6 +64,12 @@ func TestValidateWork(t *testing.T) {
 	live_work_bytes, _ := hex.DecodeString(string(LiveGenesisBlock.Work))
 	live_bad_work, _ := hex.DecodeString("00")
 
+	if !ValidateBlockWork(LiveGenesisBlock) {
+		t.Errorf("Work validation failed for genesis block")
+		return
+	}
+
+	// A bit of a redundandy test to ensure ValidateBlockWork is correct
 	if !ValidateWork(live_block_hash, utils.Reversed(live_work_bytes)) {
 		t.Errorf("Work validation failed for genesis block")
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/uint128"
+	"github.com/frankh/rai/utils"
 	"github.com/golang/crypto/blake2b"
 	"strings"
 	// We've forked golang's ed25519 implementation
@@ -59,6 +60,8 @@ type Block interface {
 	Type() BlockType
 	GetBalance() uint128.Uint128
 	GetSignature() rai.Signature
+	GetWork() rai.Work
+	RootHash() rai.BlockHash
 	Hash() rai.BlockHash
 }
 
@@ -129,8 +132,28 @@ func (b *SendBlock) Previous() Block {
 	return FetchBlock(b.PreviousHash)
 }
 
+func (b *OpenBlock) RootHash() rai.BlockHash {
+	return b.SourceHash
+}
+
+func (b *ReceiveBlock) RootHash() rai.BlockHash {
+	return b.PreviousHash
+}
+
+func (b *ChangeBlock) RootHash() rai.BlockHash {
+	return b.PreviousHash
+}
+
+func (b *SendBlock) RootHash() rai.BlockHash {
+	return b.PreviousHash
+}
+
 func (b *CommonBlock) GetSignature() rai.Signature {
 	return b.Signature
+}
+
+func (b *CommonBlock) GetWork() rai.Work {
+	return b.Work
 }
 
 func (*SendBlock) Type() BlockType {
@@ -286,8 +309,8 @@ func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Acco
 	return HashBytes(source_bytes, repr_bytes, account_bytes)
 }
 
-// ValidateWork takes the "work" value and block hash and
-// verifies that the work passes the difficulty.
+// ValidateWork takes the "work" value (little endian from hex)
+// and block hash and verifies that the work passes the difficulty.
 // To verify this, we create a new 8 byte hash of the
 // work and the block hash and convert this to a uint64
 // which must be higher (or equal) than the difficulty
@@ -307,12 +330,19 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 	return work_value_int >= Conf.WorkThreshold
 }
 
+func ValidateBlockWork(b Block) bool {
+	hash_bytes := b.RootHash().ToBytes()
+	work_bytes, _ := hex.DecodeString(string(b.GetWork()))
+
+	return ValidateWork(hash_bytes, utils.Reversed(work_bytes))
+}
+
 func GenerateWork(b Block) rai.Work {
 	block_hash := b.Hash().ToBytes()
 	work := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	for {
 		if ValidateWork(block_hash, work) {
-			return rai.Work(fmt.Sprintf("%x", work))
+			return rai.Work(fmt.Sprintf("%x", utils.Reversed(work)))
 		}
 		incrementWork(work)
 	}
