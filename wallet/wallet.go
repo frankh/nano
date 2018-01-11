@@ -13,15 +13,56 @@ type Wallet struct {
 	privateKey ed25519.PrivateKey
 	PublicKey  ed25519.PublicKey
 	Head       blocks.Block
+	Work       *rai.Work
+	PoWchan    chan rai.Work
 }
 
 func New(private string) (w Wallet) {
 	w.PublicKey, w.privateKey = address.KeypairFromPrivateKey(private)
 	account := address.PubKeyToAddress(w.PublicKey)
 
-	w.Head = blocks.FetchOpen(account)
+	open := blocks.FetchOpen(account)
+	if open != nil {
+		w.Head = open
+	}
 
 	return w
+}
+
+// Returns true if the wallet has prepared proof of work,
+func (w *Wallet) HasPoW() bool {
+	select {
+	case work := <-w.PoWchan:
+		w.Work = &work
+		w.PoWchan = nil
+		return true
+	default:
+		return false
+	}
+}
+
+func (w *Wallet) WaitPoW() {
+	for !w.HasPoW() {
+	}
+}
+
+// Triggers a gorouting to generate the next proof of work.
+func (w *Wallet) GeneratePoWAsync() error {
+	if w.PoWchan != nil {
+		return errors.Errorf("Already generating PoW")
+	}
+
+	if w.Head == nil {
+		return errors.Errorf("Cannot generate PoW on empty wallet")
+	}
+
+	w.PoWchan = make(chan rai.Work)
+
+	go func(c chan rai.Work, b blocks.Block) {
+		c <- blocks.GenerateWork(b)
+	}(w.PoWchan, w.Head)
+
+	return nil
 }
 
 func (w *Wallet) GetBalance() uint128.Uint128 {

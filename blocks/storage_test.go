@@ -4,16 +4,6 @@ import (
 	"testing"
 )
 
-var TestConfigLive = Config{
-	":memory:",
-	LiveGenesisBlock,
-}
-
-var TestConfigTest = Config{
-	":memory:",
-	TestGenesisBlock,
-}
-
 func TestInit(t *testing.T) {
 	Init(TestConfigLive)
 

@@ -8,8 +8,9 @@ import (
 )
 
 type Config struct {
-	Path         string
-	GenesisBlock *OpenBlock
+	Path          string
+	GenesisBlock  *OpenBlock
+	WorkThreshold uint64
 }
 
 func FetchOpen(account rai.Account) (b *OpenBlock) {

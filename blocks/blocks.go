@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/uint128"
-	"github.com/frankh/rai/utils"
 	"github.com/golang/crypto/blake2b"
 	"strings"
 	// We've forked golang's ed25519 implementation
@@ -43,9 +43,8 @@ var LiveGenesisBlock = FromJson([]byte(`{
 var LiveConfig = Config{
 	"db.sqlite",
 	LiveGenesisBlock,
+	0xffffffc000000000,
 }
-
-const publish_threshold = 0xffffffc000000000
 
 type BlockType string
 
@@ -299,12 +298,35 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 		panic("Unable to create hash")
 	}
 
-	// Work is BigEndian by default, reverse to make it LittleEndian
-	hash.Write(utils.Reversed(work))
+	hash.Write(work)
 	hash.Write(block_hash)
 
 	work_value := hash.Sum(nil)
 	work_value_int := binary.LittleEndian.Uint64(work_value)
 
-	return work_value_int >= publish_threshold
+	return work_value_int >= Conf.WorkThreshold
+}
+
+func GenerateWork(b Block) rai.Work {
+	block_hash := b.Hash().ToBytes()
+	work := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	for {
+		if ValidateWork(block_hash, work) {
+			return rai.Work(fmt.Sprintf("%x", work))
+		}
+		incrementWork(work)
+	}
+}
+
+func incrementWork(work []byte) {
+	for i := 0; i < len(work)-1; i++ {
+		if work[i] < 255 {
+			work[i]++
+			return
+		} else {
+			work[i]++
+			incrementWork(work[i+1:])
+			return
+		}
+	}
 }
