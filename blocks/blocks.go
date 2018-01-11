@@ -287,12 +287,19 @@ func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Acco
 	return HashBytes(source_bytes, repr_bytes, account_bytes)
 }
 
+// ValidateWork takes the "work" value and block hash and
+// verifies that the work passes the difficulty.
+// To verify this, we create a new 8 byte hash of the
+// work and the block hash and convert this to a uint64
+// which must be higher (or equal) than the difficulty
+// (0xffffffc000000000) to be valid.
 func ValidateWork(block_hash []byte, work []byte) bool {
 	hash, err := blake2b.New(8, nil)
 	if err != nil {
 		panic("Unable to create hash")
 	}
 
+	// Work is BigEndian by default, reverse to make it LittleEndian
 	hash.Write(utils.Reversed(work))
 	hash.Write(block_hash)
 
