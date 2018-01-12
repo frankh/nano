@@ -184,20 +184,6 @@ type RawBlock struct {
 	Destination    rai.Account
 }
 
-func NewSendBlock(previous rai.BlockHash, balance uint128.Uint128, destination rai.Account) RawBlock {
-	return RawBlock{
-		Send,              // Type
-		rai.BlockHash(""), // Source
-		rai.Account(""),   // Representative
-		rai.Account(""),   // Account
-		rai.Work(""),      // Work
-		rai.Signature(""), // Signature
-		previous,          // Previous
-		balance,           // Balance
-		destination,       // Destination
-	}
-}
-
 func FromJson(b []byte) (block Block) {
 	var raw RawBlock
 	json.Unmarshal(b, &raw)
