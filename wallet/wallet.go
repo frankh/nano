@@ -46,7 +46,7 @@ func (w *Wallet) WaitPoW() {
 	}
 }
 
-func (w *Wallet) WaitingForPoW() {
+func (w *Wallet) WaitingForPoW() bool {
 	return w.PoWchan != nil
 }
 
@@ -78,16 +78,28 @@ func (w *Wallet) GetBalance() uint128.Uint128 {
 
 }
 
-func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.RawBlock, error) {
+func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (blocks.Block, error) {
 	if w.Head == nil {
 		return nil, errors.Errorf("Cannot send from empty account")
 	}
 
-	block := blocks.NewSendBlock(
+	if w.Work == nil {
+		return nil, errors.Errorf("No PoW")
+	}
+
+	common := blocks.CommonBlock{
+		*w.Work,
+		"",
+	}
+
+	block := blocks.SendBlock{
 		w.Head.Hash(),
 		w.GetBalance().Sub(amount),
 		destination,
-	)
+		common,
+	}
+
+	block.Signature = block.Hash().Sign(w.privateKey)
 
 	return &block, nil
 }

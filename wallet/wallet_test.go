@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"github.com/frankh/rai/blocks"
+	"github.com/frankh/rai/uint128"
 	"testing"
 )
 
@@ -50,11 +51,18 @@ func TestPoW(t *testing.T) {
 		t.Errorf("Started PoW while already in progress")
 	}
 
-	w.WaitPoW()
-	w.Head.(*blocks.OpenBlock).Work = *w.Work
+	_, err := w.Send(blocks.TestGenesisBlock.Account, uint128.FromInts(0, 1))
 
-	if !blocks.ValidateBlockWork(w.Head) {
-		t.Errorf("Pow was invalid")
+	if err == nil {
+		t.Errorf("Created send block without PoW")
+	}
+
+	w.WaitPoW()
+
+	send, _ := w.Send(blocks.TestGenesisBlock.Account, uint128.FromInts(0, 1))
+
+	if !blocks.ValidateBlockWork(send) {
+		t.Errorf("Invalid work")
 	}
 
 }

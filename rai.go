@@ -2,6 +2,7 @@ package rai
 
 import (
 	"encoding/hex"
+	"github.com/frankh/crypto/ed25519"
 	"strings"
 )
 
@@ -16,6 +17,11 @@ func (hash BlockHash) ToBytes() []byte {
 		panic(err)
 	}
 	return bytes
+}
+
+func (hash BlockHash) Sign(private_key ed25519.PrivateKey) Signature {
+	sig := hex.EncodeToString(ed25519.Sign(private_key, hash.ToBytes()))
+	return Signature(strings.ToUpper(sig))
 }
 
 func BlockHashFromBytes(b []byte) BlockHash {
