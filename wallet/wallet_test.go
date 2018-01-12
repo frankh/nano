@@ -32,13 +32,17 @@ func TestPoWFail(t *testing.T) {
 	if err == nil {
 		t.Errorf("Empty wallet should not generate work %#v", err)
 	}
+
+	if w.WaitingForPoW() {
+		t.Errorf("Marked as generating when not")
+	}
 }
 
 func TestPoW(t *testing.T) {
 	blocks.Init(TestConfigTest)
 	w := New(blocks.TestPrivateKey)
 
-	if w.GeneratePoWAsync() != nil {
+	if w.GeneratePoWAsync() != nil || !w.WaitingForPoW() {
 		t.Errorf("Failed to start PoW generation")
 	}
 
