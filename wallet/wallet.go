@@ -46,7 +46,7 @@ func (w *Wallet) WaitPoW() {
 	}
 }
 
-// Triggers a gorouting to generate the next proof of work.
+// Triggers a goroutine to generate the next proof of work.
 func (w *Wallet) GeneratePoWAsync() error {
 	if w.PoWchan != nil {
 		return errors.Errorf("Already generating PoW")

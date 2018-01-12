@@ -42,6 +42,10 @@ func TestPoW(t *testing.T) {
 		t.Errorf("Failed to start PoW generation")
 	}
 
+	if w.GeneratePoWAsync() == nil {
+		t.Errorf("Started PoW while already in progress")
+	}
+
 	w.WaitPoW()
 	w.Head.(*blocks.OpenBlock).Work = *w.Work
 
