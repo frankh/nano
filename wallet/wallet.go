@@ -128,7 +128,6 @@ func (w *Wallet) Open(source rai.BlockHash, representative rai.Account, work *ra
 	}
 
 	w.Head = &block
-
 	return &block, nil
 }
 
@@ -160,7 +159,6 @@ func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.
 	block.Signature = block.Hash().Sign(w.privateKey)
 
 	w.Head = &block
-
 	return &block, nil
 }
 
@@ -201,7 +199,6 @@ func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
 	block.Signature = block.Hash().Sign(w.privateKey)
 
 	w.Head = &block
-
 	return &block, nil
 }
 
@@ -228,6 +225,5 @@ func (w *Wallet) Change(representative rai.Account) (*blocks.ChangeBlock, error)
 	block.Signature = block.Hash().Sign(w.privateKey)
 
 	w.Head = &block
-
 	return &block, nil
 }
