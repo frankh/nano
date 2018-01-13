@@ -1,6 +1,8 @@
 package wallet
 
 import (
+	"encoding/hex"
+	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
 	"testing"
@@ -69,8 +71,6 @@ func TestPoW(t *testing.T) {
 
 func TestSend(t *testing.T) {
 	blocks.Init(TestConfigTest)
-	blocks.FetchBlock(blocks.TestGenesisBlock.Hash())
-	blocks.FetchBlock(blocks.TestGenesisBlock.Hash())
 	w := New(blocks.TestPrivateKey)
 
 	w.GeneratePowSync()
@@ -93,6 +93,41 @@ func TestSend(t *testing.T) {
 
 	if w.GetBalance() != blocks.GenesisAmount {
 		t.Errorf("Balance not updated after receive")
+	}
+
+}
+
+func TestOpen(t *testing.T) {
+	blocks.Init(TestConfigTest)
+	amount := uint128.FromInts(1, 1)
+
+	blocks.Init(TestConfigTest)
+	sendW := New(blocks.TestPrivateKey)
+	_, priv := address.GenerateKey()
+	openW := New(hex.EncodeToString(priv))
+
+	sendW.GeneratePowSync()
+	send, _ := sendW.Send(openW.Address(), amount)
+
+	openWork := blocks.GenerateWork(send)
+	_, err := openW.Open(send.Hash(), openW.Address(), &openWork)
+
+	if err == nil {
+		t.Errorf("Expected error for referencing unstored send")
+	}
+
+	if openW.GetBalance() != uint128.FromInts(0, 0) {
+		t.Errorf("Open should start at zero balance")
+	}
+
+	blocks.StoreBlock(send)
+	_, err = openW.Open(send.Hash(), openW.Address(), &openWork)
+	if err != nil {
+		t.Errorf("Open block failed")
+	}
+
+	if openW.GetBalance() != amount {
+		t.Errorf("Open balance didn't equal send amount")
 	}
 
 }

@@ -92,6 +92,46 @@ func (w *Wallet) GetBalance() uint128.Uint128 {
 
 }
 
+func (w *Wallet) Open(source rai.BlockHash, representative rai.Account, work *rai.Work) (*blocks.OpenBlock, error) {
+	if w.Head != nil {
+		return nil, errors.Errorf("Cannot open a non empty account")
+	}
+
+	existing := blocks.FetchOpen(w.Address())
+	if existing != nil {
+		return nil, errors.Errorf("Cannot open account, open block already exists")
+	}
+
+	send_block := blocks.FetchBlock(source)
+	if send_block == nil {
+		return nil, errors.Errorf("Could not find references send")
+	}
+
+	w.Work = work
+
+	common := blocks.CommonBlock{
+		*w.Work,
+		"",
+	}
+
+	block := blocks.OpenBlock{
+		source,
+		representative,
+		w.Address(),
+		common,
+	}
+
+	block.Signature = block.Hash().Sign(w.privateKey)
+
+	if !blocks.ValidateBlockWork(&block) {
+		return nil, errors.Errorf("Invalid PoW")
+	}
+
+	w.Head = &block
+
+	return &block, nil
+}
+
 func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.SendBlock, error) {
 	if w.Head == nil {
 		return nil, errors.Errorf("Cannot send from empty account")
@@ -155,6 +195,33 @@ func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
 	block := blocks.ReceiveBlock{
 		w.Head.Hash(),
 		source,
+		common,
+	}
+
+	block.Signature = block.Hash().Sign(w.privateKey)
+
+	w.Head = &block
+
+	return &block, nil
+}
+
+func (w *Wallet) Change(representative rai.Account) (*blocks.ChangeBlock, error) {
+	if w.Head == nil {
+		return nil, errors.Errorf("Cannot change on empty account")
+	}
+
+	if w.Work == nil {
+		return nil, errors.Errorf("No PoW")
+	}
+
+	common := blocks.CommonBlock{
+		*w.Work,
+		"",
+	}
+
+	block := blocks.ChangeBlock{
+		w.Head.Hash(),
+		representative,
 		common,
 	}
 
