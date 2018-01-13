@@ -101,17 +101,15 @@ func TestOpen(t *testing.T) {
 	blocks.Init(TestConfigTest)
 	amount := uint128.FromInts(1, 1)
 
-	blocks.Init(TestConfigTest)
 	sendW := New(blocks.TestPrivateKey)
+	sendW.GeneratePowSync()
+
 	_, priv := address.GenerateKey()
 	openW := New(hex.EncodeToString(priv))
-
-	sendW.GeneratePowSync()
 	send, _ := sendW.Send(openW.Address(), amount)
-
 	openWork := blocks.GenerateWork(send)
-	_, err := openW.Open(send.Hash(), openW.Address(), &openWork)
 
+	_, err := openW.Open(send.Hash(), openW.Address(), &openWork)
 	if err == nil {
 		t.Errorf("Expected error for referencing unstored send")
 	}
@@ -128,6 +126,11 @@ func TestOpen(t *testing.T) {
 
 	if openW.GetBalance() != amount {
 		t.Errorf("Open balance didn't equal send amount")
+	}
+
+	_, err = openW.Open(send.Hash(), openW.Address(), &openWork)
+	if err == nil {
+		t.Errorf("Expected error for creating duplicate open block")
 	}
 
 }
