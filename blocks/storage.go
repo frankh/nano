@@ -5,6 +5,7 @@ import (
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
 )
 
 type Config struct {
@@ -29,6 +30,7 @@ func FetchOpen(account rai.Account) (b *OpenBlock) {
     balance,
     destination
   FROM block WHERE type=? and account=?`, Open, account)
+	defer rows.Close()
 
 	if err != nil {
 		panic(err)
@@ -57,6 +59,7 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
     balance,
     destination
   FROM block WHERE hash=?`, hash)
+	defer rows.Close()
 
 	if err != nil {
 		panic(err)
@@ -110,6 +113,18 @@ func blockFromRow(rows *sql.Rows) (b Block) {
 			common,
 		}
 		return &block
+	case Send:
+		balance_int, err := uint128.FromString(balance)
+		if err != nil {
+			panic(err)
+		}
+		block := SendBlock{
+			previous,
+			balance_int,
+			destination,
+			common,
+		}
+		return &block
 	default:
 		panic("Unknown block type")
 	}
@@ -144,6 +159,7 @@ func Init(config Config) {
 
 	Conf = config
 	Conn, err = sql.Open("sqlite3", config.Path)
+	Conn.SetMaxOpenConns(1)
 	if err != nil {
 		panic(err)
 	}
@@ -154,6 +170,7 @@ func Init(config Config) {
 	}
 
 	if !table_check.Next() {
+		log.Println("Creating database schema")
 		prep, err := Conn.Prepare(`
       CREATE TABLE 'block' (
         'hash' TEXT PRIMARY KEY,
@@ -183,10 +200,12 @@ func Init(config Config) {
 	}
 
 	rows, err := Conn.Query(`SELECT hash FROM block WHERE hash=?`, LiveGenesisBlockHash)
+	defer rows.Close()
 	if err != nil {
 		panic(err)
 	}
 	if !rows.Next() {
+		log.Println("Storing genesis block")
 		StoreBlock(config.GenesisBlock)
 	}
 
@@ -226,6 +245,45 @@ func StoreBlock(block Block) {
 			b.SourceHash,
 			b.Representative,
 			b.Account,
+			b.Work,
+			b.Signature,
+		)
+
+		if err != nil {
+			panic(err)
+		}
+	case Send:
+		prep, err := Conn.Prepare(`
+      INSERT INTO block (
+        hash,
+        type,
+        previous,
+        balance,
+        destination,
+        work,
+        signature
+      ) values (
+        ?,
+        'send',
+        ?,
+        ?,
+        ?,
+        ?,
+        ?
+      )
+    `)
+
+		if err != nil {
+			panic(err)
+		}
+
+		b := block.(*SendBlock)
+
+		_, err = prep.Exec(
+			b.Hash(),
+			b.PreviousHash,
+			b.Balance.String(),
+			b.Destination,
 			b.Work,
 			b.Signature,
 		)

@@ -66,3 +66,33 @@ func TestPoW(t *testing.T) {
 	}
 
 }
+
+func TestSend(t *testing.T) {
+	blocks.Init(TestConfigTest)
+	blocks.FetchBlock(blocks.TestGenesisBlock.Hash())
+	blocks.FetchBlock(blocks.TestGenesisBlock.Hash())
+	w := New(blocks.TestPrivateKey)
+
+	w.GeneratePowSync()
+	amount := uint128.FromInts(1, 1)
+
+	send, _ := w.Send(blocks.TestGenesisBlock.Account, amount)
+
+	if w.GetBalance() != blocks.GenesisAmount.Sub(amount) {
+		t.Errorf("Balance unchanged after send")
+	}
+
+	_, err := w.Send(blocks.TestGenesisBlock.Account, blocks.GenesisAmount)
+	if err == nil {
+		t.Errorf("Sent more than account balance")
+	}
+
+	w.GeneratePowSync()
+	blocks.StoreBlock(send)
+	w.Receive(send.Hash())
+
+	if w.GetBalance() != blocks.GenesisAmount {
+		t.Errorf("Balance not updated after receive")
+	}
+
+}

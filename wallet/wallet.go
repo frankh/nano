@@ -17,6 +17,10 @@ type Wallet struct {
 	PoWchan    chan rai.Work
 }
 
+func (w *Wallet) Address() rai.Account {
+	return address.PubKeyToAddress(w.PublicKey)
+}
+
 func New(private string) (w Wallet) {
 	w.PublicKey, w.privateKey = address.KeypairFromPrivateKey(private)
 	account := address.PubKeyToAddress(w.PublicKey)
@@ -50,6 +54,16 @@ func (w *Wallet) WaitingForPoW() bool {
 	return w.PoWchan != nil
 }
 
+func (w *Wallet) GeneratePowSync() error {
+	err := w.GeneratePoWAsync()
+	if err != nil {
+		return err
+	}
+
+	w.WaitPoW()
+	return nil
+}
+
 // Triggers a goroutine to generate the next proof of work.
 func (w *Wallet) GeneratePoWAsync() error {
 	if w.PoWchan != nil {
@@ -78,13 +92,17 @@ func (w *Wallet) GetBalance() uint128.Uint128 {
 
 }
 
-func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (blocks.Block, error) {
+func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.SendBlock, error) {
 	if w.Head == nil {
 		return nil, errors.Errorf("Cannot send from empty account")
 	}
 
 	if w.Work == nil {
 		return nil, errors.Errorf("No PoW")
+	}
+
+	if amount.Compare(w.GetBalance()) > 0 {
+		return nil, errors.Errorf("Tried to send more than balance")
 	}
 
 	common := blocks.CommonBlock{
@@ -100,6 +118,49 @@ func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (blocks.B
 	}
 
 	block.Signature = block.Hash().Sign(w.privateKey)
+
+	w.Head = &block
+
+	return &block, nil
+}
+
+func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
+	if w.Head == nil {
+		return nil, errors.Errorf("Cannot receive to empty account")
+	}
+
+	if w.Work == nil {
+		return nil, errors.Errorf("No PoW")
+	}
+
+	send_block := blocks.FetchBlock(source)
+
+	if send_block == nil {
+		return nil, errors.Errorf("Source block not found")
+	}
+
+	if send_block.Type() != blocks.Send {
+		return nil, errors.Errorf("Source block is not a send")
+	}
+
+	if send_block.(*blocks.SendBlock).Destination != w.Address() {
+		return nil, errors.Errorf("Send is not for this account")
+	}
+
+	common := blocks.CommonBlock{
+		*w.Work,
+		"",
+	}
+
+	block := blocks.ReceiveBlock{
+		w.Head.Hash(),
+		source,
+		common,
+	}
+
+	block.Signature = block.Hash().Sign(w.privateKey)
+
+	w.Head = &block
 
 	return &block, nil
 }
