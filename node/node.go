@@ -44,11 +44,15 @@ type MessageCommon struct {
 	Work      [8]byte
 }
 
-type MessagePublishOpen struct {
-	MessageHeader
+type MessageBlockOpen struct {
 	Source         [32]byte
 	Representative [32]byte
 	Account        [32]byte
+}
+
+type MessagePublishOpen struct {
+	MessageHeader
+	MessageBlockOpen
 	MessageCommon
 }
 
