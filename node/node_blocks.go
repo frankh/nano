@@ -10,18 +10,73 @@ import (
 	"github.com/frankh/rai/uint128"
 )
 
+type MessageBlockCommon struct {
+	Signature [64]byte
+	Work      [8]byte
+}
+
 type MessageBlockOpen struct {
 	Source         [32]byte
 	Representative [32]byte
 	Account        [32]byte
-	MessageCommon
+	MessageBlockCommon
 }
 
 type MessageBlockSend struct {
 	Previous    [32]byte
 	Destination [32]byte
 	Balance     [16]byte
-	MessageCommon
+	MessageBlockCommon
+}
+
+type MessageBlockReceive struct {
+	Previous [32]byte
+	Source   [32]byte
+	MessageBlockCommon
+}
+
+func (m *MessageBlockCommon) ReadCommon(buf *bytes.Buffer) error {
+	n, err := buf.Read(m.Signature[:])
+
+	if n != len(m.Signature) {
+		return errors.New("Wrong number of bytes in signature")
+	}
+	if err != nil {
+		return err
+	}
+
+	n, err = buf.Read(m.Work[:])
+
+	if n != len(m.Work) {
+		return errors.New("Wrong number of bytes in work")
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
+	n, err := buf.Write(m.Signature[:])
+
+	if n != len(m.Signature) {
+		return errors.New("Wrong number of bytes in signature")
+	}
+	if err != nil {
+		return err
+	}
+
+	n, err = buf.Write(m.Work[:])
+
+	if n != len(m.Work) {
+		return errors.New("Wrong number of bytes in work")
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *MessageBlockOpen) ToBlock() *blocks.OpenBlock {
@@ -65,7 +120,7 @@ func (m *MessagePublishOpen) Read(buf *bytes.Buffer) error {
 	n2, err2 := buf.Read(m.Source[:])
 	n3, err3 := buf.Read(m.Representative[:])
 	n4, err4 := buf.Read(m.Account[:])
-	err5 := m.MessageCommon.ReadCommon(buf)
+	err5 := m.MessageBlockCommon.ReadCommon(buf)
 
 	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
 		return errors.New("Failed to read header")
@@ -83,7 +138,7 @@ func (m *MessagePublishOpen) Write(buf *bytes.Buffer) error {
 	n2, err2 := buf.Write(m.Source[:])
 	n3, err3 := buf.Write(m.Representative[:])
 	n4, err4 := buf.Write(m.Account[:])
-	err5 := m.MessageCommon.WriteCommon(buf)
+	err5 := m.MessageBlockCommon.WriteCommon(buf)
 
 	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
 		return errors.New("Failed to write header")
@@ -105,7 +160,7 @@ func (m *MessagePublishSend) Read(buf *bytes.Buffer) error {
 	n2, err2 := buf.Read(m.Previous[:])
 	n3, err3 := buf.Read(m.Destination[:])
 	n4, err4 := buf.Read(m.Balance[:])
-	err5 := m.MessageCommon.ReadCommon(buf)
+	err5 := m.MessageBlockCommon.ReadCommon(buf)
 
 	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
 		return errors.New("Failed to read header")
@@ -123,7 +178,7 @@ func (m *MessagePublishSend) Write(buf *bytes.Buffer) error {
 	n2, err2 := buf.Write(m.Previous[:])
 	n3, err3 := buf.Write(m.Destination[:])
 	n4, err4 := buf.Write(m.Balance[:])
-	err5 := m.MessageCommon.WriteCommon(buf)
+	err5 := m.MessageBlockCommon.WriteCommon(buf)
 
 	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
 		return errors.New("Failed to write header")

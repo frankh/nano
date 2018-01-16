@@ -2,7 +2,6 @@ package node
 
 import (
 	"bytes"
-	"errors"
 )
 
 var MagicNumber = [2]byte{'R', 'C'}
@@ -39,11 +38,6 @@ type MessageHeader struct {
 	BlockType    byte
 }
 
-type MessageCommon struct {
-	Signature [64]byte
-	Work      [8]byte
-}
-
 type MessagePublishOpen struct {
 	MessageHeader
 	MessageBlockOpen
@@ -52,50 +46,6 @@ type MessagePublishOpen struct {
 type MessagePublishSend struct {
 	MessageHeader
 	MessageBlockSend
-}
-
-func (m *MessageCommon) ReadCommon(buf *bytes.Buffer) error {
-	n, err := buf.Read(m.Signature[:])
-
-	if n != len(m.Signature) {
-		return errors.New("Wrong number of bytes in signature")
-	}
-	if err != nil {
-		return err
-	}
-
-	n, err = buf.Read(m.Work[:])
-
-	if n != len(m.Work) {
-		return errors.New("Wrong number of bytes in work")
-	}
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessageCommon) WriteCommon(buf *bytes.Buffer) error {
-	n, err := buf.Write(m.Signature[:])
-
-	if n != len(m.Signature) {
-		return errors.New("Wrong number of bytes in signature")
-	}
-	if err != nil {
-		return err
-	}
-
-	n, err = buf.Write(m.Work[:])
-
-	if n != len(m.Work) {
-		return errors.New("Wrong number of bytes in work")
-	}
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (m *MessageHeader) WriteHeader(buf *bytes.Buffer) error {
