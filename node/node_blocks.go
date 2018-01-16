@@ -35,6 +35,12 @@ type MessageBlockReceive struct {
 	MessageBlockCommon
 }
 
+type MessageBlockChange struct {
+	Previous       [32]byte
+	Representative [32]byte
+	MessageBlockCommon
+}
+
 func (m *MessageBlockCommon) ReadCommon(buf *bytes.Buffer) error {
 	n, err := buf.Read(m.Signature[:])
 
@@ -111,80 +117,162 @@ func (m *MessageBlockSend) ToBlock() *blocks.SendBlock {
 	return &block
 }
 
-func (m *MessagePublishOpen) Read(buf *bytes.Buffer) error {
-	err1 := m.MessageHeader.ReadHeader(buf)
-	if m.MessageHeader.BlockType != BlockType_open {
-		return errors.New("Wrong blocktype")
+func (m *MessageBlockReceive) ToBlock() *blocks.ReceiveBlock {
+	common := blocks.CommonBlock{
+		rai.Work(hex.EncodeToString(m.Work[:])),
+		rai.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
-	n2, err2 := buf.Read(m.Source[:])
-	n3, err3 := buf.Read(m.Representative[:])
-	n4, err4 := buf.Read(m.Account[:])
-	err5 := m.MessageBlockCommon.ReadCommon(buf)
+	block := blocks.ReceiveBlock{
+		rai.BlockHash(hex.EncodeToString(m.Previous[:])),
+		rai.BlockHash(hex.EncodeToString(m.Source[:])),
+		common,
+	}
 
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
+	return &block
+}
+
+func (m *MessageBlockChange) ToBlock() *blocks.ChangeBlock {
+	common := blocks.CommonBlock{
+		rai.Work(hex.EncodeToString(m.Work[:])),
+		rai.Signature(hex.EncodeToString(m.Signature[:])),
+	}
+
+	block := blocks.ChangeBlock{
+		rai.BlockHash(hex.EncodeToString(m.Previous[:])),
+		address.PubKeyToAddress(m.Representative[:]),
+		common,
+	}
+
+	return &block
+}
+
+func (m *MessageBlockOpen) Read(buf *bytes.Buffer) error {
+	n1, err1 := buf.Read(m.Source[:])
+	n2, err2 := buf.Read(m.Representative[:])
+	n3, err3 := buf.Read(m.Account[:])
+	err4 := m.MessageBlockCommon.ReadCommon(buf)
+
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 		return errors.New("Failed to read header")
 	}
 
-	if n2 != 32 || n3 != 32 || n4 != 32 {
+	if n1 != 32 || n2 != 32 || n3 != 32 {
 		return errors.New("Wrong number of bytes read")
 	}
 
 	return nil
 }
 
-func (m *MessagePublishOpen) Write(buf *bytes.Buffer) error {
-	err1 := m.MessageHeader.WriteHeader(buf)
-	n2, err2 := buf.Write(m.Source[:])
-	n3, err3 := buf.Write(m.Representative[:])
-	n4, err4 := buf.Write(m.Account[:])
-	err5 := m.MessageBlockCommon.WriteCommon(buf)
+func (m *MessageBlockOpen) Write(buf *bytes.Buffer) error {
+	n1, err1 := buf.Write(m.Source[:])
+	n2, err2 := buf.Write(m.Representative[:])
+	n3, err3 := buf.Write(m.Account[:])
+	err4 := m.MessageBlockCommon.WriteCommon(buf)
 
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 		return errors.New("Failed to write header")
 	}
 
-	if n2 != 32 || n3 != 32 || n4 != 32 {
+	if n1 != 32 || n2 != 32 || n3 != 32 {
 		return errors.New("Wrong number of bytes written")
 	}
 
 	return nil
 }
 
-func (m *MessagePublishSend) Read(buf *bytes.Buffer) error {
-	err1 := m.MessageHeader.ReadHeader(buf)
-	if m.MessageHeader.BlockType != BlockType_send {
-		return errors.New("Wrong blocktype")
-	}
+func (m *MessageBlockSend) Read(buf *bytes.Buffer) error {
+	n1, err1 := buf.Read(m.Previous[:])
+	n2, err2 := buf.Read(m.Destination[:])
+	n3, err3 := buf.Read(m.Balance[:])
+	err4 := m.MessageBlockCommon.ReadCommon(buf)
 
-	n2, err2 := buf.Read(m.Previous[:])
-	n3, err3 := buf.Read(m.Destination[:])
-	n4, err4 := buf.Read(m.Balance[:])
-	err5 := m.MessageBlockCommon.ReadCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 		return errors.New("Failed to read header")
 	}
 
-	if n2 != 32 || n3 != 32 || n4 != 16 {
+	if n1 != 32 || n2 != 32 || n3 != 16 {
 		return errors.New("Wrong number of bytes read")
 	}
 
 	return nil
 }
 
-func (m *MessagePublishSend) Write(buf *bytes.Buffer) error {
-	err1 := m.MessageHeader.WriteHeader(buf)
-	n2, err2 := buf.Write(m.Previous[:])
-	n3, err3 := buf.Write(m.Destination[:])
-	n4, err4 := buf.Write(m.Balance[:])
-	err5 := m.MessageBlockCommon.WriteCommon(buf)
+func (m *MessageBlockSend) Write(buf *bytes.Buffer) error {
+	n1, err1 := buf.Write(m.Previous[:])
+	n2, err2 := buf.Write(m.Destination[:])
+	n3, err3 := buf.Write(m.Balance[:])
+	err4 := m.MessageBlockCommon.WriteCommon(buf)
 
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || err5 != nil {
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 		return errors.New("Failed to write header")
 	}
 
-	if n2 != 32 || n3 != 32 || n4 != 16 {
+	if n1 != 32 || n2 != 32 || n3 != 16 {
+		return errors.New("Wrong number of bytes written")
+	}
+
+	return nil
+}
+
+func (m *MessageBlockReceive) Read(buf *bytes.Buffer) error {
+	n1, err1 := buf.Read(m.Previous[:])
+	n2, err2 := buf.Read(m.Source[:])
+	err3 := m.MessageBlockCommon.ReadCommon(buf)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return errors.New("Failed to read header")
+	}
+
+	if n1 != 32 || n2 != 32 {
+		return errors.New("Wrong number of bytes read")
+	}
+
+	return nil
+}
+
+func (m *MessageBlockReceive) Write(buf *bytes.Buffer) error {
+	n1, err1 := buf.Write(m.Previous[:])
+	n2, err2 := buf.Write(m.Source[:])
+	err3 := m.MessageBlockCommon.WriteCommon(buf)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return errors.New("Failed to write header")
+	}
+
+	if n1 != 32 || n2 != 32 {
+		return errors.New("Wrong number of bytes written")
+	}
+
+	return nil
+}
+
+func (m *MessageBlockChange) Read(buf *bytes.Buffer) error {
+	n1, err1 := buf.Read(m.Previous[:])
+	n2, err2 := buf.Read(m.Representative[:])
+	err3 := m.MessageBlockCommon.ReadCommon(buf)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return errors.New("Failed to read change block")
+	}
+
+	if n1 != 32 || n2 != 32 {
+		return errors.New("Wrong number of bytes read")
+	}
+
+	return nil
+}
+
+func (m *MessageBlockChange) Write(buf *bytes.Buffer) error {
+	n1, err1 := buf.Write(m.Previous[:])
+	n2, err2 := buf.Write(m.Representative[:])
+	err3 := m.MessageBlockCommon.WriteCommon(buf)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return errors.New("Failed to write change block")
+	}
+
+	if n1 != 32 || n2 != 32 {
 		return errors.New("Wrong number of bytes written")
 	}
 

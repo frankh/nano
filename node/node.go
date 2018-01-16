@@ -2,6 +2,7 @@ package node
 
 import (
 	"bytes"
+	"errors"
 )
 
 var MagicNumber = [2]byte{'R', 'C'}
@@ -46,6 +47,16 @@ type MessagePublishOpen struct {
 type MessagePublishSend struct {
 	MessageHeader
 	MessageBlockSend
+}
+
+type MessagePublishReceive struct {
+	MessageHeader
+	MessageBlockReceive
+}
+
+type MessagePublishChange struct {
+	MessageHeader
+	MessageBlockChange
 }
 
 func (m *MessageHeader) WriteHeader(buf *bytes.Buffer) error {
@@ -95,5 +106,140 @@ func (m *MessageHeader) ReadHeader(buf *bytes.Buffer) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (m *MessagePublishOpen) Read(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.ReadHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_open {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockOpen.Read(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func (m *MessagePublishOpen) Write(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.WriteHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_open {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockOpen.Write(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func (m *MessagePublishSend) Read(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.ReadHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_send {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockSend.Read(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func (m *MessagePublishSend) Write(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.WriteHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_send {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockSend.Write(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+func (m *MessagePublishReceive) Read(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.ReadHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_receive {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockReceive.Read(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func (m *MessagePublishReceive) Write(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.WriteHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_receive {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockReceive.Write(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func (m *MessagePublishChange) Read(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.ReadHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_change {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockChange.Read(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func (m *MessagePublishChange) Write(buf *bytes.Buffer) error {
+	err1 := m.MessageHeader.WriteHeader(buf)
+	if m.MessageHeader.BlockType != BlockType_change {
+		return errors.New("Wrong blocktype")
+	}
+	err2 := m.MessageBlockChange.Write(buf)
+
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+
 	return nil
 }
