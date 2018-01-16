@@ -79,8 +79,8 @@ type OpenBlock struct {
 
 type SendBlock struct {
 	PreviousHash rai.BlockHash
-	Balance      uint128.Uint128
 	Destination  rai.Account
+	Balance      uint128.Uint128
 	CommonBlock
 }
 
@@ -204,8 +204,8 @@ func FromJson(b []byte) (block Block) {
 	case Send:
 		b := SendBlock{
 			raw.Previous,
-			raw.Balance,
 			raw.Destination,
+			raw.Balance,
 			common,
 		}
 		block = &b

@@ -151,8 +151,8 @@ func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.
 
 	block := blocks.SendBlock{
 		w.Head.Hash(),
-		w.GetBalance().Sub(amount),
 		destination,
+		w.GetBalance().Sub(amount),
 		common,
 	}
 

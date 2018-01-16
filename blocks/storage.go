@@ -120,8 +120,8 @@ func blockFromRow(rows *sql.Rows) (b Block) {
 		}
 		block := SendBlock{
 			previous,
-			balance_int,
 			destination,
+			balance_int,
 			common,
 		}
 		return &block
