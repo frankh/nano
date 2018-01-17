@@ -178,6 +178,12 @@ func (*ReceiveBlock) Type() BlockType {
 	return Receive
 }
 
+func (b *OpenBlock) VerifySignature() (bool, error) {
+	pub, _ := address.AddressToPub(b.Account)
+	res := ed25519.Verify(pub, b.Hash().ToBytes(), b.Signature.ToBytes())
+	return res, nil
+}
+
 type RawBlock struct {
 	Type           BlockType
 	Source         rai.BlockHash
