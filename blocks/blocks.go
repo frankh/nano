@@ -46,6 +46,11 @@ var LiveConfig = Config{
 	LiveGenesisBlock,
 	0xffffffc000000000,
 }
+var TestConfig = Config{
+	":memory:",
+	TestGenesisBlock,
+	0xffffffc000000000,
+}
 
 type BlockType string
 
@@ -133,7 +138,8 @@ func (b *SendBlock) Previous() Block {
 }
 
 func (b *OpenBlock) RootHash() rai.BlockHash {
-	return b.SourceHash
+	pub, _ := address.AddressToPub(b.Account)
+	return rai.BlockHash(hex.EncodeToString(pub))
 }
 
 func (b *ReceiveBlock) RootHash() rai.BlockHash {
@@ -306,6 +312,9 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 	if err != nil {
 		panic("Unable to create hash")
 	}
+	if len(work) != 8 {
+		panic("Bad work length")
+	}
 
 	hash.Write(work)
 	hash.Write(block_hash)
@@ -320,11 +329,12 @@ func ValidateBlockWork(b Block) bool {
 	hash_bytes := b.RootHash().ToBytes()
 	work_bytes, _ := hex.DecodeString(string(b.GetWork()))
 
-	return ValidateWork(hash_bytes, utils.Reversed(work_bytes))
+	res := ValidateWork(hash_bytes, utils.Reversed(work_bytes))
+	return res
 }
 
-func GenerateWork(b Block) rai.Work {
-	block_hash := b.Hash().ToBytes()
+func GenerateWorkForHash(b rai.BlockHash) rai.Work {
+	block_hash := b.ToBytes()
 	work := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	for {
 		if ValidateWork(block_hash, work) {
@@ -332,6 +342,10 @@ func GenerateWork(b Block) rai.Work {
 		}
 		incrementWork(work)
 	}
+}
+
+func GenerateWork(b Block) rai.Work {
+	return GenerateWorkForHash(b.Hash())
 }
 
 func incrementWork(work []byte) {

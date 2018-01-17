@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"github.com/frankh/crypto/ed25519"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
@@ -70,15 +71,15 @@ func (w *Wallet) GeneratePoWAsync() error {
 		return errors.Errorf("Already generating PoW")
 	}
 
-	if w.Head == nil {
-		return errors.Errorf("Cannot generate PoW on empty wallet")
-	}
-
 	w.PoWchan = make(chan rai.Work)
 
-	go func(c chan rai.Work, b blocks.Block) {
-		c <- blocks.GenerateWork(b)
-	}(w.PoWchan, w.Head)
+	go func(c chan rai.Work, w *Wallet) {
+		if w.Head == nil {
+			c <- blocks.GenerateWorkForHash(rai.BlockHash(hex.EncodeToString(w.PublicKey)))
+		} else {
+			c <- blocks.GenerateWork(w.Head)
+		}
+	}(w.PoWchan, w)
 
 	return nil
 }
@@ -92,9 +93,13 @@ func (w *Wallet) GetBalance() uint128.Uint128 {
 
 }
 
-func (w *Wallet) Open(source rai.BlockHash, representative rai.Account, work *rai.Work) (*blocks.OpenBlock, error) {
+func (w *Wallet) Open(source rai.BlockHash, representative rai.Account) (*blocks.OpenBlock, error) {
 	if w.Head != nil {
 		return nil, errors.Errorf("Cannot open a non empty account")
+	}
+
+	if w.Work == nil {
+		return nil, errors.Errorf("No PoW")
 	}
 
 	existing := blocks.FetchOpen(w.Address())
@@ -106,8 +111,6 @@ func (w *Wallet) Open(source rai.BlockHash, representative rai.Account, work *ra
 	if send_block == nil {
 		return nil, errors.Errorf("Could not find references send")
 	}
-
-	w.Work = work
 
 	common := blocks.CommonBlock{
 		*w.Work,

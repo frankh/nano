@@ -62,7 +62,7 @@ func TestValidateWork(t *testing.T) {
 
 	live_block_hash, _ := address.AddressToPub(LiveGenesisBlock.Account)
 	live_work_bytes, _ := hex.DecodeString(string(LiveGenesisBlock.Work))
-	live_bad_work, _ := hex.DecodeString("00")
+	live_bad_work, _ := hex.DecodeString("0000000000000000")
 
 	if !ValidateBlockWork(LiveGenesisBlock) {
 		t.Errorf("Work validation failed for genesis block")

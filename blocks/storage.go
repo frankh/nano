@@ -152,12 +152,12 @@ func (b *ChangeBlock) GetBalance() uint128.Uint128 {
 }
 
 var Conn *sql.DB
-var Conf Config
+var Conf *Config
 
 func Init(config Config) {
 	var err error
 
-	Conf = config
+	Conf = &config
 	Conn, err = sql.Open("sqlite3", config.Path)
 	Conn.SetMaxOpenConns(1)
 	if err != nil {
@@ -170,7 +170,9 @@ func Init(config Config) {
 	}
 
 	if !table_check.Next() {
-		log.Println("Creating database schema")
+		if false {
+			log.Println("Creating database schema")
+		}
 		prep, err := Conn.Prepare(`
       CREATE TABLE 'block' (
         'hash' TEXT PRIMARY KEY,
@@ -205,7 +207,9 @@ func Init(config Config) {
 		panic(err)
 	}
 	if !rows.Next() {
-		log.Println("Storing genesis block")
+		if false {
+			log.Println("Storing genesis block")
+		}
 		StoreBlock(config.GenesisBlock)
 	}
 

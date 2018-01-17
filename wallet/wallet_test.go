@@ -28,19 +28,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestPoWFail(t *testing.T) {
-	blocks.Init(TestConfigLive)
-	w := New(blocks.TestPrivateKey)
-	err := w.GeneratePoWAsync()
-	if err == nil {
-		t.Errorf("Empty wallet should not generate work %#v", err)
-	}
-
-	if w.WaitingForPoW() {
-		t.Errorf("Marked as generating when not")
-	}
-}
-
 func TestPoW(t *testing.T) {
 	blocks.Init(TestConfigTest)
 	w := New(blocks.TestPrivateKey)
@@ -107,9 +94,9 @@ func TestOpen(t *testing.T) {
 	_, priv := address.GenerateKey()
 	openW := New(hex.EncodeToString(priv))
 	send, _ := sendW.Send(openW.Address(), amount)
-	openWork := blocks.GenerateWork(send)
+	openW.GeneratePowSync()
 
-	_, err := openW.Open(send.Hash(), openW.Address(), &openWork)
+	_, err := openW.Open(send.Hash(), openW.Address())
 	if err == nil {
 		t.Errorf("Expected error for referencing unstored send")
 	}
@@ -119,16 +106,16 @@ func TestOpen(t *testing.T) {
 	}
 
 	blocks.StoreBlock(send)
-	_, err = openW.Open(send.Hash(), openW.Address(), &openWork)
+	_, err = openW.Open(send.Hash(), openW.Address())
 	if err != nil {
-		t.Errorf("Open block failed")
+		t.Errorf("Open block failed: %s", err)
 	}
 
 	if openW.GetBalance() != amount {
 		t.Errorf("Open balance didn't equal send amount")
 	}
 
-	_, err = openW.Open(send.Hash(), openW.Address(), &openWork)
+	_, err = openW.Open(send.Hash(), openW.Address())
 	if err == nil {
 		t.Errorf("Expected error for creating duplicate open block")
 	}

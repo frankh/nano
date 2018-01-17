@@ -8,6 +8,7 @@ import (
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
+	"github.com/frankh/rai/utils"
 )
 
 type MessageBlockCommon struct {
@@ -51,7 +52,11 @@ func (m *MessageBlockCommon) ReadCommon(buf *bytes.Buffer) error {
 		return err
 	}
 
-	n, err = buf.Read(m.Work[:])
+	work := make([]byte, 8)
+	n, err = buf.Read(work)
+	work = utils.Reversed(work)
+
+	copy(m.Work[:], work)
 
 	if n != len(m.Work) {
 		return errors.New("Wrong number of bytes in work")
@@ -73,7 +78,7 @@ func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
 		return err
 	}
 
-	n, err = buf.Write(m.Work[:])
+	n, err = buf.Write(utils.Reversed(m.Work[:]))
 
 	if n != len(m.Work) {
 		return errors.New("Wrong number of bytes in work")
@@ -85,7 +90,7 @@ func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
 	return nil
 }
 
-func (m *MessageBlockOpen) ToBlock() *blocks.OpenBlock {
+func (m *MessageBlockOpen) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
 		rai.Work(hex.EncodeToString(m.Work[:])),
 		rai.Signature(hex.EncodeToString(m.Signature[:])),
@@ -101,7 +106,7 @@ func (m *MessageBlockOpen) ToBlock() *blocks.OpenBlock {
 	return &block
 }
 
-func (m *MessageBlockSend) ToBlock() *blocks.SendBlock {
+func (m *MessageBlockSend) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
 		rai.Work(hex.EncodeToString(m.Work[:])),
 		rai.Signature(hex.EncodeToString(m.Signature[:])),
@@ -117,7 +122,7 @@ func (m *MessageBlockSend) ToBlock() *blocks.SendBlock {
 	return &block
 }
 
-func (m *MessageBlockReceive) ToBlock() *blocks.ReceiveBlock {
+func (m *MessageBlockReceive) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
 		rai.Work(hex.EncodeToString(m.Work[:])),
 		rai.Signature(hex.EncodeToString(m.Signature[:])),
@@ -132,7 +137,7 @@ func (m *MessageBlockReceive) ToBlock() *blocks.ReceiveBlock {
 	return &block
 }
 
-func (m *MessageBlockChange) ToBlock() *blocks.ChangeBlock {
+func (m *MessageBlockChange) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
 		rai.Work(hex.EncodeToString(m.Work[:])),
 		rai.Signature(hex.EncodeToString(m.Signature[:])),

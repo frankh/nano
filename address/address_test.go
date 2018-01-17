@@ -1,6 +1,7 @@
 package address
 
 import (
+	"encoding/hex"
 	"github.com/frankh/rai"
 	"testing"
 )
@@ -20,6 +21,15 @@ var invalid_addresses = []rai.Account{
 	"xrb38nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
 	"xrb8nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
 	"xrb_8nm8t5rimw6h6j7wyokbs8jiygzs7baoha4pqzhfw1k79npyr1km8w6y7r8",
+}
+
+func TestAddressToPub(t *testing.T) {
+	pub, _ := AddressToPub(rai.Account("xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3"))
+
+	if hex.EncodeToString(pub) != "e89208dd038fbb269987689621d52292ae9c35941a7484756ecced92a65093ba" {
+		t.Errorf("Address got wrong public key")
+	}
+
 }
 
 func TestValidateAddress(t *testing.T) {
