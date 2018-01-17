@@ -58,37 +58,39 @@ func TestReadWriteMessageBody(t *testing.T) {
 	}
 }
 
+func validateTestBlock(t *testing.T, b blocks.Block, expectedHash rai.BlockHash) {
+	if b.Hash() != expectedHash {
+		t.Errorf("Wrong blockhash %s", b.Hash())
+	}
+	if !blocks.ValidateBlockWork(b) {
+		t.Errorf("Bad PoW")
+	}
+}
+
 func TestReadPublish(t *testing.T) {
 	m, err := readMessagePublish(bytes.NewBuffer(publishSend))
 	if err != nil {
 		t.Errorf("Failed to read send message %s", err)
 	}
-
-	if m.ToBlock().Hash() != rai.BlockHash("687DCB9C8EB8AF9F39D8107C3432A8732EDBED1E3B5E2E0F6B86643D1EB5E24F") {
-		t.Errorf("Wrong blockhash %s", m.ToBlock().Hash())
-	}
+	validateTestBlock(t, m.ToBlock(), rai.BlockHash("687DCB9C8EB8AF9F39D8107C3432A8732EDBED1E3B5E2E0F6B86643D1EB5E24F"))
 
 	m, err = readMessagePublish(bytes.NewBuffer(publishReceive))
 	if err != nil {
 		t.Errorf("Failed to read receive message %s", err)
 	}
-	if m.ToBlock().Hash() != rai.BlockHash("7D3E9D79342AA73B7148CB46706D23ED8BB0041A5316D67A053F336ABF0E6B60") {
-		t.Errorf("Wrong blockhash %s", m.ToBlock().Hash())
-	}
+	validateTestBlock(t, m.ToBlock(), rai.BlockHash("7D3E9D79342AA73B7148CB46706D23ED8BB0041A5316D67A053F336ABF0E6B60"))
+
 	m, err = readMessagePublish(bytes.NewBuffer(publishOpen))
 	if err != nil {
 		t.Errorf("Failed to read open message %s", err)
 	}
-	if m.ToBlock().Hash() != rai.BlockHash("5F73CF212E58563734D57CCFCCEFE481DE40C96F097F594F4FA32C5585D84AA4") {
-		t.Errorf("Wrong blockhash %s", m.ToBlock().Hash())
-	}
+	validateTestBlock(t, m.ToBlock(), rai.BlockHash("5F73CF212E58563734D57CCFCCEFE481DE40C96F097F594F4FA32C5585D84AA4"))
+
 	m, err = readMessagePublish(bytes.NewBuffer(publishChange))
 	if err != nil {
 		t.Errorf("Failed to read change message %s", err)
 	}
-	if m.ToBlock().Hash() != rai.BlockHash("4AABA9923AC794B635B8C3CC275C37F0D28E43D44EB5E27F8B23955E335D5DD3") {
-		t.Errorf("Wrong blockhash %s", m.ToBlock().Hash())
-	}
+	validateTestBlock(t, m.ToBlock(), rai.BlockHash("4AABA9923AC794B635B8C3CC275C37F0D28E43D44EB5E27F8B23955E335D5DD3"))
 
 	m, err = readMessagePublish(bytes.NewBuffer(publishWrongWork))
 	if blocks.ValidateBlockWork(m.ToBlock()) {
