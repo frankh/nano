@@ -156,13 +156,12 @@ var Conf *Config
 
 func Init(config Config) {
 	var err error
-
 	Conf = &config
 	Conn, err = sql.Open("sqlite3", config.Path)
-	Conn.SetMaxOpenConns(1)
 	if err != nil {
 		panic(err)
 	}
+	Conn.SetMaxOpenConns(1)
 
 	table_check, err := Conn.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name='block'`)
 	if err != nil {

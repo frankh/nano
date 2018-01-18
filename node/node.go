@@ -2,9 +2,11 @@ package node
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"github.com/frankh/rai/blocks"
+	"net"
 )
 
 var MagicNumber = [2]byte{'R', 'C'}
@@ -31,6 +33,11 @@ const (
 	BlockType_change
 )
 
+type Peer struct {
+	IP   net.IP
+	Port uint16
+}
+
 type MessageHeader struct {
 	MagicNumber  [2]byte
 	VersionMax   byte
@@ -39,6 +46,11 @@ type MessageHeader struct {
 	MessageType  byte
 	Extensions   byte
 	BlockType    byte
+}
+
+type MessageKeepAlive struct {
+	MessageHeader
+	Peers []Peer
 }
 
 type MessagePublishOpen struct {
@@ -67,30 +79,67 @@ type MessagePublish interface {
 	ToBlock() blocks.Block
 }
 
-func messagePublishForHeader(header MessageHeader) (MessagePublish, error) {
-	var m MessagePublish
-	switch header.BlockType {
-	case BlockType_send:
-		var message MessagePublishSend
-		message.MessageHeader = header
-		m = &message
-	case BlockType_receive:
-		var message MessagePublishReceive
-		message.MessageHeader = header
-		m = &message
-	case BlockType_open:
-		var message MessagePublishOpen
-		message.MessageHeader = header
-		m = &message
-	case BlockType_change:
-		var message MessagePublishChange
-		message.MessageHeader = header
-		m = &message
-	default:
-		return nil, errors.New("Unknown block type")
+func (m *MessageKeepAlive) Read(buf *bytes.Buffer) error {
+	var header MessageHeader
+	err := header.ReadHeader(buf)
+	if err != nil {
+		return err
 	}
 
-	return m, nil
+	if header.MessageType != Message_keepalive {
+		return errors.New("Tried to read wrong message type")
+	}
+
+	m.MessageHeader = header
+	m.Peers = make([]Peer, 0)
+
+	for {
+		peerPort := make([]byte, 2)
+		peerIp := make(net.IP, net.IPv6len)
+		n, err := buf.Read(peerIp)
+		if n == 0 {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		n2, err := buf.Read(peerPort)
+		if err != nil {
+			return err
+		}
+		if n < net.IPv6len || n2 < 2 {
+			return errors.New("Not enough ip bytes")
+		}
+
+		m.Peers = append(m.Peers, Peer{peerIp, binary.LittleEndian.Uint16(peerPort)})
+	}
+
+	return nil
+}
+
+func (m *MessageKeepAlive) Write(buf *bytes.Buffer) error {
+	err := m.MessageHeader.WriteHeader(buf)
+	if err != nil {
+		return err
+	}
+
+	for _, peer := range m.Peers {
+		_, err = buf.Write(peer.IP)
+		if err != nil {
+			return err
+		}
+		portBytes := make([]byte, 2)
+		binary.LittleEndian.PutUint16(portBytes, peer.Port)
+		if err != nil {
+			return err
+		}
+		_, err = buf.Write(portBytes)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func readMessagePublish(buf *bytes.Buffer) (MessagePublish, error) {
@@ -112,6 +161,32 @@ func readMessagePublish(buf *bytes.Buffer) (MessagePublish, error) {
 	err = m.Read(buf)
 	if err != nil {
 		return nil, err
+	}
+
+	return m, nil
+}
+
+func messagePublishForHeader(header MessageHeader) (MessagePublish, error) {
+	var m MessagePublish
+	switch header.BlockType {
+	case BlockType_send:
+		var message MessagePublishSend
+		message.MessageHeader = header
+		m = &message
+	case BlockType_receive:
+		var message MessagePublishReceive
+		message.MessageHeader = header
+		m = &message
+	case BlockType_open:
+		var message MessagePublishOpen
+		message.MessageHeader = header
+		m = &message
+	case BlockType_change:
+		var message MessagePublishChange
+		message.MessageHeader = header
+		m = &message
+	default:
+		return nil, errors.New("Unknown block type")
 	}
 
 	return m, nil
