@@ -6,7 +6,7 @@ An implementation of the [RaiBlocks](http://raiblocks.net/) protocol written fro
 About the Project
 -----------------
 
-A crypto currency has to be resilient to survive, and the network is only as resilient as the weakest link. Currently, a critical bug in the RaiBlocks reference implementation would bring down the entire network. The aim of this project is to create an alternative implementation that is 100% compatible with the reference implementation to create a more robust network.
+A crypto currency has to be resilient to survive, and the network is only as resilient as the weakest link. With only one implementation of the protocol, any bugs that are found affect the entire network. The aim of this project is to create an alternative implementation that is 100% compatible with the reference implementation to create a more robust network.
 
 Additionally, there is no reference specification for the RaiBlocks protocol, only a high level overview. I've had to learn the protocol from reading the source-code. I'm hoping a second implementation will be useful for others to learn the protocol.
 
