@@ -32,6 +32,14 @@ Milestones
     - Done! ([Rai Vanity](https://github.com/frankh/rai-vanity))
   * GoRai Node
     * A basic node that can validate and store blocks sent to it
+        * ~Data structures~
+        * ~Database~
+        * ~Proof of work~
+        * ~Cryptographic functions~
+        * ~Basic wallet functions~
+        * Networking
+            * Receiving keepalives and blocks
+            * Sending keepalives
     * Add broadcasting and discovery
     * Add RPC interface
     * Add voting
@@ -41,7 +49,7 @@ Milestones
     * Add fast syncing
   * GoRai Wallet
     * Basic UI, creating/sending/receiving transactions
-    * Add seed restore, account generation, changing references
+    * Add seed restore, account generation, changing representatives
     * Add bundled node and light wallet/node selection option
     * UI Polish and distributables
 
