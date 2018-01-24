@@ -22,7 +22,7 @@ var TestConfigTest = Config{
 }
 
 func TestSignMessage(t *testing.T) {
-	test_private_key_data := "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4"
+	privateKeyData := "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4"
 
 	block := FromJson([]byte(`{
 		"type":           "open",
@@ -33,8 +33,8 @@ func TestSignMessage(t *testing.T) {
 		"signature":      "ECDA914373A2F0CA1296475BAEE40500A7F0A7AD72A5A80C81D7FAB7F6C802B2CC7DB50F5DD0FB25B2EF11761FA7344A158DD5A700B21BD47DE5BD0F63153A02"
 	}`))
 
-	signature_bytes := SignMessage(test_private_key_data, block.Hash().ToBytes())
-	signature := strings.ToUpper(hex.EncodeToString(signature_bytes))
+	signatureBytes := SignMessage(privateKeyData, block.Hash().ToBytes())
+	signature := strings.ToUpper(hex.EncodeToString(signatureBytes))
 
 	if signature != string(block.GetSignature()) {
 		t.Errorf("Signature %s was expected to be %s", signature, block.GetSignature())
@@ -61,9 +61,9 @@ func BenchmarkGenerateWork(b *testing.B) {
 func TestValidateWork(t *testing.T) {
 	Init(TestConfigLive)
 
-	live_block_hash, _ := address.AddressToPub(LiveGenesisBlock.Account)
-	live_work_bytes, _ := hex.DecodeString(string(LiveGenesisBlock.Work))
-	live_bad_work, _ := hex.DecodeString("0000000000000000")
+	liveBlockHash, _ := address.AddressToPub(LiveGenesisBlock.Account)
+	liveWorkBytes, _ := hex.DecodeString(string(LiveGenesisBlock.Work))
+	liveBadWork, _ := hex.DecodeString("0000000000000000")
 
 	if !ValidateBlockWork(LiveGenesisBlock) {
 		t.Errorf("Work validation failed for genesis block")
@@ -71,14 +71,13 @@ func TestValidateWork(t *testing.T) {
 	}
 
 	// A bit of a redundandy test to ensure ValidateBlockWork is correct
-	if !ValidateWork(live_block_hash, utils.Reversed(live_work_bytes)) {
+	if !ValidateWork(liveBlockHash, utils.Reversed(liveWorkBytes)) {
 		t.Errorf("Work validation failed for genesis block")
 	}
 
-	if ValidateWork(live_block_hash, live_bad_work) {
+	if ValidateWork(liveBlockHash, liveBadWork) {
 		t.Errorf("Work validation passed for bad work")
 	}
-
 }
 
 func TestHashOpen(t *testing.T) {

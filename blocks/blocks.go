@@ -139,8 +139,8 @@ func (b *SendBlock) Previous() Block {
 }
 
 func (b *OpenBlock) RootHash() rai.BlockHash {
-	pub, _ := address.AddressToPub(b.Account)
-	return rai.BlockHash(hex.EncodeToString(pub))
+	pubKey, _ := address.AddressToPub(b.Account)
+	return rai.BlockHash(hex.EncodeToString(pubKey))
 }
 
 func (b *ReceiveBlock) RootHash() rai.BlockHash {
@@ -180,8 +180,8 @@ func (*ReceiveBlock) Type() BlockType {
 }
 
 func (b *OpenBlock) VerifySignature() (bool, error) {
-	pub, _ := address.AddressToPub(b.Account)
-	res := ed25519.Verify(pub, b.Hash().ToBytes(), b.Signature.ToBytes())
+	pubKey, _ := address.AddressToPub(b.Account)
+	res := ed25519.Verify(pubKey, b.Hash().ToBytes(), b.Signature.ToBytes())
 	return res, nil
 }
 
@@ -263,9 +263,9 @@ func (b RawBlock) HashToString() (result rai.BlockHash) {
 	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(b.Hash())))
 }
 
-func SignMessage(private_key string, message []byte) (signature []byte) {
-	_, priv := address.KeypairFromPrivateKey(private_key)
-	return ed25519.Sign(priv, message)
+func SignMessage(privateKey string, message []byte) (signature []byte) {
+	_, privKey := address.KeypairFromPrivateKey(privateKey)
+	return ed25519.Sign(privKey, message)
 }
 
 func HashBytes(inputs ...[]byte) (result []byte) {
@@ -282,30 +282,30 @@ func HashBytes(inputs ...[]byte) (result []byte) {
 }
 
 func HashReceive(previous rai.BlockHash, source rai.BlockHash) (result []byte) {
-	previous_bytes, _ := hex.DecodeString(string(previous))
-	source_bytes, _ := hex.DecodeString(string(source))
-	return HashBytes(previous_bytes, source_bytes)
+	previousBytes, _ := hex.DecodeString(string(previous))
+	sourceBytes, _ := hex.DecodeString(string(source))
+	return HashBytes(previousBytes, sourceBytes)
 }
 
 func HashChange(previous rai.BlockHash, representative rai.Account) (result []byte) {
-	previous_bytes, _ := hex.DecodeString(string(previous))
-	repr_bytes, _ := address.AddressToPub(representative)
-	return HashBytes(previous_bytes, repr_bytes)
+	previousBytes, _ := hex.DecodeString(string(previous))
+	reprBytes, _ := address.AddressToPub(representative)
+	return HashBytes(previousBytes, reprBytes)
 }
 
 func HashSend(previous rai.BlockHash, destination rai.Account, balance uint128.Uint128) (result []byte) {
-	previous_bytes, _ := hex.DecodeString(string(previous))
-	dest_bytes, _ := address.AddressToPub(destination)
-	balance_bytes := balance.GetBytes()
+	previousBytes, _ := hex.DecodeString(string(previous))
+	destBytes, _ := address.AddressToPub(destination)
+	balanceBytes := balance.GetBytes()
 
-	return HashBytes(previous_bytes, dest_bytes, balance_bytes)
+	return HashBytes(previousBytes, destBytes, balanceBytes)
 }
 
 func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Account) (result []byte) {
-	source_bytes, _ := hex.DecodeString(string(source))
-	repr_bytes, _ := address.AddressToPub(representative)
-	account_bytes, _ := address.AddressToPub(account)
-	return HashBytes(source_bytes, repr_bytes, account_bytes)
+	sourceBytes, _ := hex.DecodeString(string(source))
+	reprBytes, _ := address.AddressToPub(representative)
+	accountBytes, _ := address.AddressToPub(account)
+	return HashBytes(sourceBytes, reprBytes, accountBytes)
 }
 
 // ValidateWork takes the "work" value (little endian from hex)
@@ -314,7 +314,7 @@ func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Acco
 // work and the block hash and convert this to a uint64
 // which must be higher (or equal) than the difficulty
 // (0xffffffc000000000) to be valid.
-func ValidateWork(block_hash []byte, work []byte) bool {
+func ValidateWork(blockHash []byte, work []byte) bool {
 	hash, err := blake2b.New(8, nil)
 	if err != nil {
 		panic("Unable to create hash")
@@ -324,27 +324,27 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 	}
 
 	hash.Write(work)
-	hash.Write(block_hash)
+	hash.Write(blockHash)
 
-	work_value := hash.Sum(nil)
-	work_value_int := binary.LittleEndian.Uint64(work_value)
+	workValue := hash.Sum(nil)
+	workValueInt := binary.LittleEndian.Uint64(workValue)
 
-	return work_value_int >= Conf.WorkThreshold
+	return workValueInt >= Conf.WorkThreshold
 }
 
 func ValidateBlockWork(b Block) bool {
-	hash_bytes := b.RootHash().ToBytes()
-	work_bytes, _ := hex.DecodeString(string(b.GetWork()))
+	hashBytes := b.RootHash().ToBytes()
+	workBytes, _ := hex.DecodeString(string(b.GetWork()))
 
-	res := ValidateWork(hash_bytes, utils.Reversed(work_bytes))
+	res := ValidateWork(hashBytes, utils.Reversed(workBytes))
 	return res
 }
 
 func GenerateWorkForHash(b rai.BlockHash) rai.Work {
-	block_hash := b.ToBytes()
+	blockHash := b.ToBytes()
 	work := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	for {
-		if ValidateWork(block_hash, work) {
+		if ValidateWork(blockHash, work) {
 			return rai.Work(fmt.Sprintf("%x", utils.Reversed(work)))
 		}
 		incrementWork(work)

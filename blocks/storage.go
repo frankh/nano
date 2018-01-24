@@ -74,7 +74,7 @@ func FetchBlock(hash rai.BlockHash) (b Block) {
 }
 
 func blockFromRow(rows *sql.Rows) (b Block) {
-	var block_type BlockType
+	var blockType BlockType
 	var source rai.BlockHash
 	var representative rai.Account
 	var account rai.Account
@@ -85,7 +85,7 @@ func blockFromRow(rows *sql.Rows) (b Block) {
 	var destination rai.Account
 
 	err := rows.Scan(
-		&block_type,
+		&blockType,
 		&source,
 		&representative,
 		&account,
@@ -105,7 +105,7 @@ func blockFromRow(rows *sql.Rows) (b Block) {
 		signature,
 	}
 
-	switch block_type {
+	switch blockType {
 	case Open:
 		block := OpenBlock{
 			source,
@@ -115,14 +115,14 @@ func blockFromRow(rows *sql.Rows) (b Block) {
 		}
 		return &block
 	case Send:
-		balance_int, err := uint128.FromString(balance)
+		balanceInt, err := uint128.FromString(balance)
 		if err != nil {
 			panic(err)
 		}
 		block := SendBlock{
 			previous,
 			destination,
-			balance_int,
+			balanceInt,
 			common,
 		}
 		return &block
@@ -164,12 +164,12 @@ func Init(config Config) {
 	}
 	Conn.SetMaxOpenConns(1)
 
-	table_check, err := Conn.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name='block'`)
+	tableCheck, err := Conn.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name='block'`)
 	if err != nil {
 		panic(err)
 	}
 
-	if !table_check.Next() {
+	if !tableCheck.Next() {
 		if false {
 			log.Println("Creating database schema")
 		}
