@@ -2,10 +2,11 @@ package blocks
 
 import (
 	"database/sql"
+	"log"
+
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
-	"log"
 )
 
 type Config struct {

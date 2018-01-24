@@ -2,10 +2,11 @@ package wallet
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
-	"testing"
 )
 
 var TestConfigTest = blocks.Config{

@@ -5,8 +5,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/frankh/rai/blocks"
 	"net"
+
+	"github.com/frankh/rai/blocks"
 )
 
 var MagicNumber = [2]byte{'R', 'C'}

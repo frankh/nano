@@ -2,8 +2,9 @@ package rai
 
 import (
 	"encoding/hex"
-	"github.com/frankh/crypto/ed25519"
 	"strings"
+
+	"github.com/frankh/crypto/ed25519"
 )
 
 type BlockHash string
