@@ -2,10 +2,11 @@ package blocks
 
 import (
 	"encoding/hex"
-	"github.com/frankh/rai/address"
-	"github.com/frankh/rai/utils"
 	"strings"
 	"testing"
+
+	"github.com/frankh/rai/address"
+	"github.com/frankh/rai/utils"
 )
 
 var TestConfigLive = Config{
