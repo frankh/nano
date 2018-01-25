@@ -170,7 +170,7 @@ func TestReadWriteHeader(t *testing.T) {
 		t.Errorf("Wrong VersionMin")
 	}
 
-	if message.MessageType != Message_publish {
+	if message.MessageType != MessagePublish {
 		t.Errorf("Wrong Message Type")
 	}
 
@@ -178,7 +178,7 @@ func TestReadWriteHeader(t *testing.T) {
 		t.Errorf("Wrong Extension")
 	}
 
-	if message.BlockType != BlockType_open {
+	if message.BlockType != BlockTypeOpen {
 		t.Errorf("Wrong Blocktype")
 	}
 
