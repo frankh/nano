@@ -69,12 +69,12 @@ type Block interface {
 	RootHash() rai.BlockHash
 	Hash() rai.BlockHash
 	Previous() Block
+	PreviousBlockHash() rai.BlockHash
 }
 
 type CommonBlock struct {
 	Work      rai.Work
 	Signature rai.Signature
-	Connected bool
 	Confirmed bool
 }
 
@@ -142,6 +142,22 @@ func (b *SendBlock) Previous() Block {
 
 func (b *OpenBlock) Previous() Block {
 	return FetchBlock(b.SourceHash)
+}
+
+func (b *ReceiveBlock) PreviousBlockHash() rai.BlockHash {
+	return b.PreviousHash
+}
+
+func (b *ChangeBlock) PreviousBlockHash() rai.BlockHash {
+	return b.PreviousHash
+}
+
+func (b *SendBlock) PreviousBlockHash() rai.BlockHash {
+	return b.PreviousHash
+}
+
+func (b *OpenBlock) PreviousBlockHash() rai.BlockHash {
+	return b.SourceHash
 }
 
 func (b *OpenBlock) RootHash() rai.BlockHash {

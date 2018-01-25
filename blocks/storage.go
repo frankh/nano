@@ -15,6 +15,10 @@ type Config struct {
 	WorkThreshold uint64
 }
 
+// Blocks that we cannot store due to not having their parent
+// block stored
+var unconnectedBlockPool map[rai.BlockHash]Block
+
 func FetchOpen(account rai.Account) (b *OpenBlock) {
 	if Conn == nil {
 		panic("Database connection not initialised")
@@ -156,6 +160,8 @@ var Conn *sql.DB
 var Conf *Config
 
 func Init(config Config) {
+	unconnectedBlockPool = make(map[rai.BlockHash]Block)
+
 	var err error
 	Conf = &config
 	Conn, err = sql.Open("sqlite3", config.Path)
@@ -186,7 +192,6 @@ func Init(config Config) {
         'work' TEXT NOT NULL DEFAULT(''),
         'signature' TEXT NOT NULL DEFAULT(''),
         'created' DATE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        'connected' INTEGER DEFAULT(0),
         'confirmed' INTEGER DEFAULT(0),
         FOREIGN KEY(previous) REFERENCES block(hash)
       );
@@ -222,15 +227,25 @@ func StoreBlock(block Block) error {
 		return errors.New("Invalid work for block")
 	}
 
-	if block.Previous() == nil {
-		return errors.New("Cannot find parent block")
-	}
-
 	if block.Type() != Open && block.Type() != Change && block.Type() != Send && block.Type() != Receive {
 		return errors.New("Unknown block type")
 	}
 
+	if block.Previous() == nil {
+		unconnectedBlockPool[block.PreviousBlockHash()] = block
+		return errors.New("Cannot find parent block")
+	}
+
 	uncheckedStoreBlock(block)
+	dependentBlock := unconnectedBlockPool[block.Hash()]
+
+	if dependentBlock != nil {
+		// We have an unconnected block dependent on this: Store it now that
+		// it's connected
+		delete(unconnectedBlockPool, block.Hash())
+		StoreBlock(dependentBlock)
+	}
+
 	return nil
 }
 
