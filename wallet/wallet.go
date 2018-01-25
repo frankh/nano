@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+
 	"github.com/frankh/crypto/ed25519"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
@@ -22,8 +23,8 @@ func (w *Wallet) Address() rai.Account {
 	return address.PubKeyToAddress(w.PublicKey)
 }
 
-func New(private string) (w Wallet) {
-	w.PublicKey, w.privateKey = address.KeypairFromPrivateKey(private)
+func New(privKey string) (w Wallet) {
+	w.PublicKey, w.privateKey = address.KeypairFromPrivateKey(privKey)
 	account := address.PubKeyToAddress(w.PublicKey)
 
 	open := blocks.FetchOpen(account)
@@ -107,31 +108,31 @@ func (w *Wallet) Open(source rai.BlockHash, representative rai.Account) (*blocks
 		return nil, errors.Errorf("Cannot open account, open block already exists")
 	}
 
-	send_block := blocks.FetchBlock(source)
-	if send_block == nil {
+	sendBlock := blocks.FetchBlock(source)
+	if sendBlock == nil {
 		return nil, errors.Errorf("Could not find references send")
 	}
 
-	common := blocks.CommonBlock{
+	commonBlock := blocks.CommonBlock{
 		*w.Work,
 		"",
 	}
 
-	block := blocks.OpenBlock{
+	openBlock := blocks.OpenBlock{
 		source,
 		representative,
 		w.Address(),
-		common,
+		commonBlock,
 	}
 
-	block.Signature = block.Hash().Sign(w.privateKey)
+	openBlock.Signature = openBlock.Hash().Sign(w.privateKey)
 
-	if !blocks.ValidateBlockWork(&block) {
+	if !blocks.ValidateBlockWork(&openBlock) {
 		return nil, errors.Errorf("Invalid PoW")
 	}
 
-	w.Head = &block
-	return &block, nil
+	w.Head = &openBlock
+	return &openBlock, nil
 }
 
 func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.SendBlock, error) {
@@ -147,22 +148,22 @@ func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.
 		return nil, errors.Errorf("Tried to send more than balance")
 	}
 
-	common := blocks.CommonBlock{
+	commonBlock := blocks.CommonBlock{
 		*w.Work,
 		"",
 	}
 
-	block := blocks.SendBlock{
+	sendBlock := blocks.SendBlock{
 		w.Head.Hash(),
 		destination,
 		w.GetBalance().Sub(amount),
-		common,
+		commonBlock,
 	}
 
-	block.Signature = block.Hash().Sign(w.privateKey)
+	sendBlock.Signature = sendBlock.Hash().Sign(w.privateKey)
 
-	w.Head = &block
-	return &block, nil
+	w.Head = &sendBlock
+	return &sendBlock, nil
 }
 
 func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
@@ -174,35 +175,35 @@ func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
 		return nil, errors.Errorf("No PoW")
 	}
 
-	send_block := blocks.FetchBlock(source)
+	sendBlock := blocks.FetchBlock(source)
 
-	if send_block == nil {
+	if sendBlock == nil {
 		return nil, errors.Errorf("Source block not found")
 	}
 
-	if send_block.Type() != blocks.Send {
+	if sendBlock.Type() != blocks.Send {
 		return nil, errors.Errorf("Source block is not a send")
 	}
 
-	if send_block.(*blocks.SendBlock).Destination != w.Address() {
+	if sendBlock.(*blocks.SendBlock).Destination != w.Address() {
 		return nil, errors.Errorf("Send is not for this account")
 	}
 
-	common := blocks.CommonBlock{
+	commonBlock := blocks.CommonBlock{
 		*w.Work,
 		"",
 	}
 
-	block := blocks.ReceiveBlock{
+	receiveBlock := blocks.ReceiveBlock{
 		w.Head.Hash(),
 		source,
-		common,
+		commonBlock,
 	}
 
-	block.Signature = block.Hash().Sign(w.privateKey)
+	receiveBlock.Signature = receiveBlock.Hash().Sign(w.privateKey)
 
-	w.Head = &block
-	return &block, nil
+	w.Head = &receiveBlock
+	return &receiveBlock, nil
 }
 
 func (w *Wallet) Change(representative rai.Account) (*blocks.ChangeBlock, error) {
@@ -214,19 +215,19 @@ func (w *Wallet) Change(representative rai.Account) (*blocks.ChangeBlock, error)
 		return nil, errors.Errorf("No PoW")
 	}
 
-	common := blocks.CommonBlock{
+	commonBlock := blocks.CommonBlock{
 		*w.Work,
 		"",
 	}
 
-	block := blocks.ChangeBlock{
+	changeBlock := blocks.ChangeBlock{
 		w.Head.Hash(),
 		representative,
-		common,
+		commonBlock,
 	}
 
-	block.Signature = block.Hash().Sign(w.privateKey)
+	changeBlock.Signature = changeBlock.Hash().Sign(w.privateKey)
 
-	w.Head = &block
-	return &block, nil
+	w.Head = &changeBlock
+	return &changeBlock, nil
 }

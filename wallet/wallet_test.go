@@ -2,10 +2,11 @@ package wallet
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
-	"testing"
 )
 
 var TestConfigTest = blocks.Config{
@@ -63,7 +64,7 @@ func TestSend(t *testing.T) {
 	w.GeneratePowSync()
 	amount := uint128.FromInts(1, 1)
 
-	send, _ := w.Send(blocks.TestGenesisBlock.Account, amount)
+	sendBlock, _ := w.Send(blocks.TestGenesisBlock.Account, amount)
 
 	if w.GetBalance() != blocks.GenesisAmount.Sub(amount) {
 		t.Errorf("Balance unchanged after send")
@@ -75,49 +76,47 @@ func TestSend(t *testing.T) {
 	}
 
 	w.GeneratePowSync()
-	blocks.StoreBlock(send)
-	w.Receive(send.Hash())
+	blocks.StoreBlock(sendBlock)
+	w.Receive(sendBlock.Hash())
 
 	if w.GetBalance() != blocks.GenesisAmount {
 		t.Errorf("Balance not updated after receive")
 	}
-
 }
 
 func TestOpen(t *testing.T) {
 	blocks.Init(TestConfigTest)
 	amount := uint128.FromInts(1, 1)
 
-	sendW := New(blocks.TestPrivateKey)
-	sendW.GeneratePowSync()
+	sendWallet := New(blocks.TestPrivateKey)
+	sendWallet.GeneratePowSync()
 
-	_, priv := address.GenerateKey()
-	openW := New(hex.EncodeToString(priv))
-	send, _ := sendW.Send(openW.Address(), amount)
-	openW.GeneratePowSync()
+	_, privKey := address.GenerateKey()
+	openWallet := New(hex.EncodeToString(privKey))
+	sendBlock, _ := sendWallet.Send(openWallet.Address(), amount)
+	openWallet.GeneratePowSync()
 
-	_, err := openW.Open(send.Hash(), openW.Address())
+	_, err := openWallet.Open(sendBlock.Hash(), openWallet.Address())
 	if err == nil {
 		t.Errorf("Expected error for referencing unstored send")
 	}
 
-	if openW.GetBalance() != uint128.FromInts(0, 0) {
+	if openWallet.GetBalance() != uint128.FromInts(0, 0) {
 		t.Errorf("Open should start at zero balance")
 	}
 
-	blocks.StoreBlock(send)
-	_, err = openW.Open(send.Hash(), openW.Address())
+	blocks.StoreBlock(sendBlock)
+	_, err = openWallet.Open(sendBlock.Hash(), openWallet.Address())
 	if err != nil {
 		t.Errorf("Open block failed: %s", err)
 	}
 
-	if openW.GetBalance() != amount {
+	if openWallet.GetBalance() != amount {
 		t.Errorf("Open balance didn't equal send amount")
 	}
 
-	_, err = openW.Open(send.Hash(), openW.Address())
+	_, err = openWallet.Open(sendBlock.Hash(), openWallet.Address())
 	if err == nil {
 		t.Errorf("Expected error for creating duplicate open block")
 	}
-
 }

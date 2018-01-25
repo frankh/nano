@@ -2,8 +2,9 @@ package rai
 
 import (
 	"encoding/hex"
-	"github.com/frankh/crypto/ed25519"
 	"strings"
+
+	"github.com/frankh/crypto/ed25519"
 )
 
 type BlockHash string
@@ -27,8 +28,8 @@ func (sig Signature) ToBytes() []byte {
 	return bytes
 }
 
-func (hash BlockHash) Sign(private_key ed25519.PrivateKey) Signature {
-	sig := hex.EncodeToString(ed25519.Sign(private_key, hash.ToBytes()))
+func (hash BlockHash) Sign(privateKey ed25519.PrivateKey) Signature {
+	sig := hex.EncodeToString(ed25519.Sign(privateKey, hash.ToBytes()))
 	return Signature(strings.ToUpper(sig))
 }
 
