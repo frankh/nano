@@ -96,8 +96,8 @@ func (m *MessageKeepAlive) Read(buf *bytes.Buffer) error {
 
 	for {
 		peerPort := make([]byte, 2)
-		peerIp := make(net.IP, net.IPv6len)
-		n, err := buf.Read(peerIp)
+		peerIP := make(net.IP, net.IPv6len)
+		n, err := buf.Read(peerIP)
 		if n == 0 {
 			break
 		}
@@ -112,7 +112,7 @@ func (m *MessageKeepAlive) Read(buf *bytes.Buffer) error {
 			return errors.New("Not enough ip bytes")
 		}
 
-		m.Peers = append(m.Peers, Peer{peerIp, binary.LittleEndian.Uint16(peerPort)})
+		m.Peers = append(m.Peers, Peer{peerIP, binary.LittleEndian.Uint16(peerPort)})
 	}
 
 	return nil

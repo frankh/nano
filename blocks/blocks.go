@@ -24,7 +24,7 @@ var GenesisAmount uint128.Uint128 = uint128.FromInts(0xffffffffffffffff, 0xfffff
 
 const TestPrivateKey string = "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4"
 
-var TestGenesisBlock = FromJson([]byte(`{
+var TestGenesisBlock = FromJSON([]byte(`{
 	"type": "open",
 	"source": "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0",
 	"representative": "xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo",
@@ -33,7 +33,7 @@ var TestGenesisBlock = FromJson([]byte(`{
 	"signature": "ECDA914373A2F0CA1296475BAEE40500A7F0A7AD72A5A80C81D7FAB7F6C802B2CC7DB50F5DD0FB25B2EF11761FA7344A158DD5A700B21BD47DE5BD0F63153A02"
 }`)).(*OpenBlock)
 
-var LiveGenesisBlock = FromJson([]byte(`{
+var LiveGenesisBlock = FromJSON([]byte(`{
 	"type":           "open",
 	"source":         "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA",
 	"representative": "xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3",
@@ -197,7 +197,7 @@ type RawBlock struct {
 	Destination    rai.Account
 }
 
-func FromJson(b []byte) (block Block) {
+func FromJSON(b []byte) (block Block) {
 	var raw RawBlock
 	json.Unmarshal(b, &raw)
 	common := CommonBlock{
