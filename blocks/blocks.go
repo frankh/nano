@@ -73,6 +73,8 @@ type Block interface {
 type CommonBlock struct {
 	Work      rai.Work
 	Signature rai.Signature
+	Connected bool
+	Confirmed bool
 }
 
 type OpenBlock struct {
@@ -200,8 +202,8 @@ func FromJson(b []byte) (block Block) {
 	var raw RawBlock
 	json.Unmarshal(b, &raw)
 	common := CommonBlock{
-		raw.Work,
-		raw.Signature,
+		Work:      raw.Work,
+		Signature: raw.Signature,
 	}
 
 	switch raw.Type {

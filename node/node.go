@@ -6,10 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/frankh/rai/blocks"
+	"log"
 	"net"
 )
 
 var MagicNumber = [2]byte{'R', 'C'}
+
+const VersionMax = 0x05
+const VersionUsing = 0x05
+const VersionMin = 0x04
 
 // Non-idiomatic constant names to keep consistent with reference implentation
 const (
@@ -77,6 +82,57 @@ type MessagePublish interface {
 	Read(*bytes.Buffer) error
 	Write(*bytes.Buffer) error
 	ToBlock() blocks.Block
+}
+
+func CreateKeepAlive(peers []Peer) *MessageKeepAlive {
+	var m MessageKeepAlive
+	m.MessageHeader.MagicNumber = MagicNumber
+	m.MessageHeader.VersionMax = VersionMax
+	m.MessageHeader.VersionUsing = VersionUsing
+	m.MessageHeader.VersionMin = VersionMin
+	m.MessageHeader.MessageType = Message_keepalive
+	return &m
+}
+
+func (p *Peer) Addr() *net.UDPAddr {
+	addr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", p.IP.String(), p.Port))
+	return addr
+}
+
+func handleMessage(buf *bytes.Buffer) {
+	var header MessageHeader
+	header.ReadHeader(bytes.NewBuffer(buf.Bytes()))
+	if header.MagicNumber != MagicNumber {
+		log.Printf("Ignored message. Wrong magic number %s", header.MagicNumber)
+		return
+	}
+
+	switch header.MessageType {
+	case Message_keepalive:
+		var m MessageKeepAlive
+		err := m.Read(buf)
+		if err != nil {
+			log.Printf("Failed to read keepalive: %s", err)
+		}
+		log.Println("Read keepalive")
+	case Message_publish:
+		m, err := readMessagePublish(buf)
+		if err != nil {
+			log.Printf("Failed to read publish: %s", err)
+		} else {
+			log.Println("Read publish")
+			blocks.StoreBlock(m.ToBlock())
+		}
+	default:
+		log.Printf("Ignored message. Cannot handle message type %d\n", header.MessageType)
+	}
+}
+
+func (m *MessageKeepAlive) Handle() error {
+	// for _, peer := range m.Peers {
+
+	// }
+	return nil
 }
 
 func (m *MessageKeepAlive) Read(buf *bytes.Buffer) error {

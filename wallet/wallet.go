@@ -113,8 +113,8 @@ func (w *Wallet) Open(source rai.BlockHash, representative rai.Account) (*blocks
 	}
 
 	common := blocks.CommonBlock{
-		*w.Work,
-		"",
+		Work:      *w.Work,
+		Signature: "",
 	}
 
 	block := blocks.OpenBlock{
@@ -148,8 +148,8 @@ func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.
 	}
 
 	common := blocks.CommonBlock{
-		*w.Work,
-		"",
+		Work:      *w.Work,
+		Signature: "",
 	}
 
 	block := blocks.SendBlock{
@@ -189,8 +189,8 @@ func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
 	}
 
 	common := blocks.CommonBlock{
-		*w.Work,
-		"",
+		Work:      *w.Work,
+		Signature: "",
 	}
 
 	block := blocks.ReceiveBlock{
@@ -215,8 +215,8 @@ func (w *Wallet) Change(representative rai.Account) (*blocks.ChangeBlock, error)
 	}
 
 	common := blocks.CommonBlock{
-		*w.Work,
-		"",
+		Work:      *w.Work,
+		Signature: "",
 	}
 
 	block := blocks.ChangeBlock{

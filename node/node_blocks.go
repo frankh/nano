@@ -92,8 +92,8 @@ func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
 
 func (m *MessageBlockOpen) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		rai.Work(hex.EncodeToString(m.Work[:])),
-		rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
+		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.OpenBlock{
@@ -108,8 +108,8 @@ func (m *MessageBlockOpen) ToBlock() blocks.Block {
 
 func (m *MessageBlockSend) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		rai.Work(hex.EncodeToString(m.Work[:])),
-		rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
+		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.SendBlock{
@@ -124,8 +124,8 @@ func (m *MessageBlockSend) ToBlock() blocks.Block {
 
 func (m *MessageBlockReceive) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		rai.Work(hex.EncodeToString(m.Work[:])),
-		rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
+		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.ReceiveBlock{
@@ -139,8 +139,8 @@ func (m *MessageBlockReceive) ToBlock() blocks.Block {
 
 func (m *MessageBlockChange) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		rai.Work(hex.EncodeToString(m.Work[:])),
-		rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
+		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.ChangeBlock{

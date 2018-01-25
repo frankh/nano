@@ -100,8 +100,8 @@ func blockFromRow(rows *sql.Rows) (b Block) {
 	}
 
 	common := CommonBlock{
-		work,
-		signature,
+		Work:      work,
+		Signature: signature,
 	}
 
 	switch block_type {
@@ -185,6 +185,8 @@ func Init(config Config) {
         'work' TEXT NOT NULL DEFAULT(''),
         'signature' TEXT NOT NULL DEFAULT(''),
         'created' DATE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        'connected' INTEGER DEFAULT(0),
+        'confirmed' INTEGER DEFAULT(0),
         FOREIGN KEY(previous) REFERENCES block(hash)
       );
       CREATE INDEX account_index ON block(account);
@@ -294,6 +296,43 @@ func StoreBlock(block Block) {
 		if err != nil {
 			panic(err)
 		}
+	case Receive:
+		prep, err := Conn.Prepare(`
+      INSERT INTO block (
+        hash,
+        type,
+        previous,
+        source,
+        work,
+        signature
+      ) values (
+        ?,
+        'receive',
+        ?,
+        ?,
+        ?,
+        ?
+      )
+    `)
+
+		if err != nil {
+			panic(err)
+		}
+
+		b := block.(*ReceiveBlock)
+
+		_, err = prep.Exec(
+			b.Hash(),
+			b.PreviousHash,
+			b.SourceHash,
+			b.Work,
+			b.Signature,
+		)
+
+		if err != nil {
+			panic(err)
+		}
+
 	default:
 		panic("Unknown block type")
 	}
