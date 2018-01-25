@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
@@ -211,12 +212,29 @@ func Init(config Config) {
 		if false {
 			log.Println("Storing genesis block")
 		}
-		StoreBlock(config.GenesisBlock)
+		uncheckedStoreBlock(config.GenesisBlock)
 	}
 
 }
 
-func StoreBlock(block Block) {
+func StoreBlock(block Block) error {
+	if !ValidateBlockWork(block) {
+		return errors.New("Invalid work for block")
+	}
+
+	if block.Previous() == nil {
+		return errors.New("Cannot find parent block")
+	}
+
+	if block.Type() != Open && block.Type() != Change && block.Type() != Send && block.Type() != Receive {
+		return errors.New("Unknown block type")
+	}
+
+	uncheckedStoreBlock(block)
+	return nil
+}
+
+func uncheckedStoreBlock(block Block) {
 	switch block.Type() {
 	case Open:
 		prep, err := Conn.Prepare(`

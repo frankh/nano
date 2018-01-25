@@ -68,6 +68,7 @@ type Block interface {
 	GetWork() rai.Work
 	RootHash() rai.BlockHash
 	Hash() rai.BlockHash
+	Previous() Block
 }
 
 type CommonBlock struct {
@@ -137,6 +138,10 @@ func (b *ChangeBlock) Previous() Block {
 
 func (b *SendBlock) Previous() Block {
 	return FetchBlock(b.PreviousHash)
+}
+
+func (b *OpenBlock) Previous() Block {
+	return FetchBlock(b.SourceHash)
 }
 
 func (b *OpenBlock) RootHash() rai.BlockHash {
