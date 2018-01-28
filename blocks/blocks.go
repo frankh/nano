@@ -20,6 +20,7 @@ const LiveGenesisBlockHash rai.BlockHash = "991CF190094C00F0B68E2E5F75F6BEE95A2E
 const LiveGenesisSourceHash rai.BlockHash = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"
 
 var GenesisAmount uint128.Uint128 = uint128.FromInts(0xffffffffffffffff, 0xffffffffffffffff)
+var WorkThreshold = uint64(0xffffffc000000000)
 
 const TestPrivateKey string = "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4"
 
@@ -41,17 +42,6 @@ var LiveGenesisBlock = FromJson([]byte(`{
 	"signature":      "9F0C933C8ADE004D808EA1985FA746A7E95BA2A38F867640F53EC8F180BDFE9E2C1268DEAD7C2664F356E37ABA362BC58E46DBA03E523A7B5A19E4B6EB12BB02"
 }`)).(*OpenBlock)
 
-var LiveConfig = Config{
-	"db.sqlite",
-	LiveGenesisBlock,
-	0xffffffc000000000,
-}
-var TestConfig = Config{
-	":memory:",
-	TestGenesisBlock,
-	0xffffffc000000000,
-}
-
 type BlockType string
 
 const (
@@ -63,12 +53,10 @@ const (
 
 type Block interface {
 	Type() BlockType
-	GetBalance() uint128.Uint128
 	GetSignature() rai.Signature
 	GetWork() rai.Work
 	RootHash() rai.BlockHash
 	Hash() rai.BlockHash
-	Previous() Block
 	PreviousBlockHash() rai.BlockHash
 }
 
@@ -118,30 +106,6 @@ func (b *ChangeBlock) Hash() rai.BlockHash {
 
 func (b *SendBlock) Hash() rai.BlockHash {
 	return rai.BlockHashFromBytes(HashSend(b.PreviousHash, b.Destination, b.Balance))
-}
-
-func (b *OpenBlock) Source() *SendBlock {
-	return FetchBlock(b.SourceHash).(*SendBlock)
-}
-
-func (b *ReceiveBlock) Source() *SendBlock {
-	return FetchBlock(b.SourceHash).(*SendBlock)
-}
-
-func (b *ReceiveBlock) Previous() Block {
-	return FetchBlock(b.PreviousHash)
-}
-
-func (b *ChangeBlock) Previous() Block {
-	return FetchBlock(b.PreviousHash)
-}
-
-func (b *SendBlock) Previous() Block {
-	return FetchBlock(b.PreviousHash)
-}
-
-func (b *OpenBlock) Previous() Block {
-	return FetchBlock(b.SourceHash)
 }
 
 func (b *ReceiveBlock) PreviousBlockHash() rai.BlockHash {
@@ -351,7 +315,7 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 	work_value := hash.Sum(nil)
 	work_value_int := binary.LittleEndian.Uint64(work_value)
 
-	return work_value_int >= Conf.WorkThreshold
+	return work_value_int >= WorkThreshold
 }
 
 func ValidateBlockWork(b Block) bool {

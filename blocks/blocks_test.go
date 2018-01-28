@@ -8,18 +8,6 @@ import (
 	"testing"
 )
 
-var TestConfigLive = Config{
-	":memory:",
-	LiveGenesisBlock,
-	0xffffffc000000000,
-}
-
-var TestConfigTest = Config{
-	":memory:",
-	TestGenesisBlock,
-	0xff00000000000000,
-}
-
 func TestSignMessage(t *testing.T) {
 	test_private_key_data := "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4"
 
@@ -42,23 +30,19 @@ func TestSignMessage(t *testing.T) {
 }
 
 func TestGenerateWork(t *testing.T) {
-	Init(TestConfigTest)
+	WorkThreshold = 0xfff0000000000000
 	GenerateWork(LiveGenesisBlock)
 }
 
 func BenchmarkGenerateWork(b *testing.B) {
-	Init(Config{
-		":memory:",
-		LiveGenesisBlock,
-		0xfff0000000000000,
-	})
+	WorkThreshold = 0xfff0000000000000
 	for n := 0; n < b.N; n++ {
 		GenerateWork(LiveGenesisBlock)
 	}
 }
 
 func TestValidateWork(t *testing.T) {
-	Init(TestConfigLive)
+	WorkThreshold = 0xffffffc000000000
 
 	live_block_hash, _ := address.AddressToPub(LiveGenesisBlock.Account)
 	live_work_bytes, _ := hex.DecodeString(string(LiveGenesisBlock.Work))

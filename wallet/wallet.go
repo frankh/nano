@@ -6,6 +6,7 @@ import (
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
+	"github.com/frankh/rai/store"
 	"github.com/frankh/rai/uint128"
 	"github.com/pkg/errors"
 )
@@ -26,7 +27,7 @@ func New(private string) (w Wallet) {
 	w.PublicKey, w.privateKey = address.KeypairFromPrivateKey(private)
 	account := address.PubKeyToAddress(w.PublicKey)
 
-	open := blocks.FetchOpen(account)
+	open := store.FetchOpen(account)
 	if open != nil {
 		w.Head = open
 	}
@@ -89,7 +90,7 @@ func (w *Wallet) GetBalance() uint128.Uint128 {
 		return uint128.FromInts(0, 0)
 	}
 
-	return w.Head.GetBalance()
+	return store.GetBalance(w.Head)
 
 }
 
@@ -102,12 +103,12 @@ func (w *Wallet) Open(source rai.BlockHash, representative rai.Account) (*blocks
 		return nil, errors.Errorf("No PoW")
 	}
 
-	existing := blocks.FetchOpen(w.Address())
+	existing := store.FetchOpen(w.Address())
 	if existing != nil {
 		return nil, errors.Errorf("Cannot open account, open block already exists")
 	}
 
-	send_block := blocks.FetchBlock(source)
+	send_block := store.FetchBlock(source)
 	if send_block == nil {
 		return nil, errors.Errorf("Could not find references send")
 	}
@@ -174,7 +175,7 @@ func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
 		return nil, errors.Errorf("No PoW")
 	}
 
-	send_block := blocks.FetchBlock(source)
+	send_block := store.FetchBlock(source)
 
 	if send_block == nil {
 		return nil, errors.Errorf("Source block not found")

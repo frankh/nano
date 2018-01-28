@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/frankh/rai/blocks"
+	"github.com/frankh/rai/store"
 	"log"
 	"net"
 )
@@ -121,7 +122,7 @@ func handleMessage(buf *bytes.Buffer) {
 			log.Printf("Failed to read publish: %s", err)
 		} else {
 			log.Println("Read publish")
-			blocks.StoreBlock(m.ToBlock())
+			store.StoreBlock(m.ToBlock())
 		}
 	default:
 		log.Printf("Ignored message. Cannot handle message type %d\n", header.MessageType)

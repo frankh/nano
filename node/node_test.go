@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/blocks"
+	"github.com/frankh/rai/store"
 	"testing"
 )
 
@@ -54,7 +55,8 @@ func TestReadWriteMessageKeepAlive(t *testing.T) {
 }
 
 func TestReadWriteMessageBody(t *testing.T) {
-	blocks.Init(blocks.TestConfig)
+	store.Init(store.TestConfig)
+
 	var message MessagePublishOpen
 	var header MessageHeader
 	buf := bytes.NewBuffer(publishSend)
@@ -148,11 +150,12 @@ func TestReadPublish(t *testing.T) {
 }
 
 func TestHandleMessage(t *testing.T) {
+	store.Init(store.TestConfig)
 	handleMessage(bytes.NewBuffer(publishTest))
 }
 
 func TestReadWriteHeader(t *testing.T) {
-	blocks.Init(blocks.TestConfig)
+	store.Init(store.TestConfig)
 	var message MessageHeader
 	buf := bytes.NewBuffer(publishOpen)
 	message.ReadHeader(buf)

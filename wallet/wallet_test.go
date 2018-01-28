@@ -4,23 +4,13 @@ import (
 	"encoding/hex"
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
+	"github.com/frankh/rai/store"
 	"github.com/frankh/rai/uint128"
 	"testing"
 )
 
-var TestConfigTest = blocks.Config{
-	":memory:",
-	blocks.TestGenesisBlock,
-	0xff00000000000000,
-}
-var TestConfigLive = blocks.Config{
-	":memory:",
-	blocks.LiveGenesisBlock,
-	0xffffff0000000000,
-}
-
 func TestNew(t *testing.T) {
-	blocks.Init(TestConfigTest)
+	store.Init(store.TestConfig)
 
 	w := New(blocks.TestPrivateKey)
 	if w.GetBalance() != blocks.GenesisAmount {
@@ -29,7 +19,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestPoW(t *testing.T) {
-	blocks.Init(TestConfigTest)
+	blocks.WorkThreshold = 0xff00000000000000
+	store.Init(store.TestConfig)
 	w := New(blocks.TestPrivateKey)
 
 	if w.GeneratePoWAsync() != nil || !w.WaitingForPoW() {
@@ -57,7 +48,8 @@ func TestPoW(t *testing.T) {
 }
 
 func TestSend(t *testing.T) {
-	blocks.Init(TestConfigTest)
+	blocks.WorkThreshold = 0xff00000000000000
+	store.Init(store.TestConfig)
 	w := New(blocks.TestPrivateKey)
 
 	w.GeneratePowSync()
@@ -75,17 +67,19 @@ func TestSend(t *testing.T) {
 	}
 
 	w.GeneratePowSync()
-	blocks.StoreBlock(send)
-	w.Receive(send.Hash())
+	store.StoreBlock(send)
+	receive, _ := w.Receive(send.Hash())
+	store.StoreBlock(receive)
 
 	if w.GetBalance() != blocks.GenesisAmount {
-		t.Errorf("Balance not updated after receive")
+		t.Errorf("Balance not updated after receive, %x != %x", w.GetBalance().GetBytes(), blocks.GenesisAmount.GetBytes())
 	}
 
 }
 
 func TestOpen(t *testing.T) {
-	blocks.Init(TestConfigTest)
+	blocks.WorkThreshold = 0xff00000000000000
+	store.Init(store.TestConfig)
 	amount := uint128.FromInts(1, 1)
 
 	sendW := New(blocks.TestPrivateKey)
@@ -105,7 +99,7 @@ func TestOpen(t *testing.T) {
 		t.Errorf("Open should start at zero balance")
 	}
 
-	blocks.StoreBlock(send)
+	store.StoreBlock(send)
 	_, err = openW.Open(send.Hash(), openW.Address())
 	if err != nil {
 		t.Errorf("Open block failed: %s", err)
