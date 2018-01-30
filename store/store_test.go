@@ -1,8 +1,9 @@
 package store
 
 import (
-	"github.com/frankh/rai/blocks"
 	"testing"
+
+	"github.com/frankh/rai/blocks"
 )
 
 func TestInit(t *testing.T) {

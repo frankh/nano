@@ -2,8 +2,9 @@ package address
 
 import (
 	"encoding/hex"
-	"github.com/frankh/rai"
 	"testing"
+
+	"github.com/frankh/rai"
 )
 
 var valid_addresses = []rai.Account{

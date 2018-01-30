@@ -3,12 +3,13 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"log"
+	"sync"
+
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/uint128"
 	_ "github.com/mattn/go-sqlite3"
-	"log"
-	"sync"
 )
 
 type Config struct {
