@@ -7,8 +7,8 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/frankh/rai"
-	"github.com/frankh/rai/utils"
+	"github.com/frankh/nano"
+	"github.com/frankh/nano/utils"
 	"github.com/golang/crypto/blake2b"
 	// We've forked golang's ed25519 implementation
 	// to use blake2b instead of sha3
@@ -20,13 +20,13 @@ const EncodeXrb = "13456789abcdefghijkmnopqrstuwxyz"
 
 var XrbEncoding = base32.NewEncoding(EncodeXrb)
 
-func ValidateAddress(account rai.Account) bool {
+func ValidateAddress(account nano.Account) bool {
 	_, err := AddressToPub(account)
 
 	return err == nil
 }
 
-func AddressToPub(account rai.Account) (public_key []byte, err error) {
+func AddressToPub(account nano.Account) (public_key []byte, err error) {
 	address := string(account)
 	// A valid xrb address is 64 bytes long
 	// First 4 are simply a hard-coded string xrb_ for ease of use
@@ -70,7 +70,7 @@ func GetAddressChecksum(pub ed25519.PublicKey) []byte {
 	return utils.Reversed(hash.Sum(nil))
 }
 
-func PubKeyToAddress(pub ed25519.PublicKey) rai.Account {
+func PubKeyToAddress(pub ed25519.PublicKey) nano.Account {
 	// Pubkey is 256bits, base32 must be multiple of 5 bits
 	// to encode properly.
 	// Pad the start with 0's and strip them off after base32 encoding
@@ -78,7 +78,7 @@ func PubKeyToAddress(pub ed25519.PublicKey) rai.Account {
 	address := XrbEncoding.EncodeToString(padded)[4:]
 	checksum := XrbEncoding.EncodeToString(GetAddressChecksum(pub))
 
-	return rai.Account("xrb_" + address + checksum)
+	return nano.Account("xrb_" + address + checksum)
 }
 
 func KeypairFromPrivateKey(private_key string) (ed25519.PublicKey, ed25519.PrivateKey) {

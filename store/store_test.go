@@ -3,7 +3,7 @@ package store
 import (
 	"testing"
 
-	"github.com/frankh/rai/blocks"
+	"github.com/frankh/nano/blocks"
 )
 
 func TestInit(t *testing.T) {

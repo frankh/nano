@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/frankh/rai/address"
-	"github.com/frankh/rai/utils"
+	"github.com/frankh/nano/address"
+	"github.com/frankh/nano/utils"
 )
 
 func TestSignMessage(t *testing.T) {

@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/frankh/rai"
-	"github.com/frankh/rai/address"
-	"github.com/frankh/rai/blocks"
-	"github.com/frankh/rai/uint128"
-	"github.com/frankh/rai/utils"
+	"github.com/frankh/nano"
+	"github.com/frankh/nano/address"
+	"github.com/frankh/nano/blocks"
+	"github.com/frankh/nano/uint128"
+	"github.com/frankh/nano/utils"
 )
 
 type MessageBlockCommon struct {
@@ -93,12 +93,12 @@ func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
 
 func (m *MessageBlockOpen) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
-		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
+		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.OpenBlock{
-		rai.BlockHash(hex.EncodeToString(m.Source[:])),
+		nano.BlockHash(hex.EncodeToString(m.Source[:])),
 		address.PubKeyToAddress(m.Representative[:]),
 		address.PubKeyToAddress(m.Account[:]),
 		common,
@@ -109,12 +109,12 @@ func (m *MessageBlockOpen) ToBlock() blocks.Block {
 
 func (m *MessageBlockSend) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
-		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
+		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.SendBlock{
-		rai.BlockHash(hex.EncodeToString(m.Previous[:])),
+		nano.BlockHash(hex.EncodeToString(m.Previous[:])),
 		address.PubKeyToAddress(m.Destination[:]),
 		uint128.FromBytes(m.Balance[:]),
 		common,
@@ -125,13 +125,13 @@ func (m *MessageBlockSend) ToBlock() blocks.Block {
 
 func (m *MessageBlockReceive) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
-		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
+		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.ReceiveBlock{
-		rai.BlockHash(hex.EncodeToString(m.Previous[:])),
-		rai.BlockHash(hex.EncodeToString(m.Source[:])),
+		nano.BlockHash(hex.EncodeToString(m.Previous[:])),
+		nano.BlockHash(hex.EncodeToString(m.Source[:])),
 		common,
 	}
 
@@ -140,12 +140,12 @@ func (m *MessageBlockReceive) ToBlock() blocks.Block {
 
 func (m *MessageBlockChange) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		Work:      rai.Work(hex.EncodeToString(m.Work[:])),
-		Signature: rai.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
+		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	block := blocks.ChangeBlock{
-		rai.BlockHash(hex.EncodeToString(m.Previous[:])),
+		nano.BlockHash(hex.EncodeToString(m.Previous[:])),
 		address.PubKeyToAddress(m.Representative[:]),
 		common,
 	}

@@ -6,9 +6,9 @@ import (
 	"log"
 	"sync"
 
-	"github.com/frankh/rai"
-	"github.com/frankh/rai/blocks"
-	"github.com/frankh/rai/uint128"
+	"github.com/frankh/nano"
+	"github.com/frankh/nano/blocks"
+	"github.com/frankh/nano/uint128"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -34,7 +34,7 @@ var TestConfigLive = Config{
 
 // Blocks that we cannot store due to not having their parent
 // block stored
-var unconnectedBlockPool map[rai.BlockHash]blocks.Block
+var unconnectedBlockPool map[nano.BlockHash]blocks.Block
 
 var Conf *Config
 var globalConn *sql.DB
@@ -59,7 +59,7 @@ func releaseConn(conn *sql.DB) {
 
 func Init(config Config) {
 	var err error
-	unconnectedBlockPool = make(map[rai.BlockHash]blocks.Block)
+	unconnectedBlockPool = make(map[nano.BlockHash]blocks.Block)
 
 	if globalConn != nil {
 		globalConn.Close()
@@ -127,13 +127,13 @@ func Init(config Config) {
 
 }
 
-func FetchOpen(account rai.Account) (b *blocks.OpenBlock) {
+func FetchOpen(account nano.Account) (b *blocks.OpenBlock) {
 	conn := getConn()
 	defer releaseConn(conn)
 	return fetchOpen(conn, account)
 }
 
-func fetchOpen(conn *sql.DB, account rai.Account) (b *blocks.OpenBlock) {
+func fetchOpen(conn *sql.DB, account nano.Account) (b *blocks.OpenBlock) {
 	rows, err := conn.Query(`SELECT
     type,
     source,
@@ -158,13 +158,13 @@ func fetchOpen(conn *sql.DB, account rai.Account) (b *blocks.OpenBlock) {
 	return blockFromRow(rows).(*blocks.OpenBlock)
 }
 
-func FetchBlock(hash rai.BlockHash) (b blocks.Block) {
+func FetchBlock(hash nano.BlockHash) (b blocks.Block) {
 	conn := getConn()
 	defer releaseConn(conn)
 	return fetchBlock(conn, hash)
 }
 
-func fetchBlock(conn *sql.DB, hash rai.BlockHash) (b blocks.Block) {
+func fetchBlock(conn *sql.DB, hash nano.BlockHash) (b blocks.Block) {
 	rows, err := conn.Query(`SELECT
     type,
     source,
@@ -191,14 +191,14 @@ func fetchBlock(conn *sql.DB, hash rai.BlockHash) (b blocks.Block) {
 
 func blockFromRow(rows *sql.Rows) (b blocks.Block) {
 	var block_type blocks.BlockType
-	var source rai.BlockHash
-	var representative rai.Account
-	var account rai.Account
-	var work rai.Work
-	var signature rai.Signature
-	var previous rai.BlockHash
+	var source nano.BlockHash
+	var representative nano.Account
+	var account nano.Account
+	var work nano.Work
+	var signature nano.Signature
+	var previous nano.BlockHash
 	var balance string
-	var destination rai.Account
+	var destination nano.Account
 
 	err := rows.Scan(
 		&block_type,

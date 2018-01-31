@@ -8,8 +8,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/frankh/rai/blocks"
-	"github.com/frankh/rai/store"
+	"github.com/frankh/nano/blocks"
+	"github.com/frankh/nano/store"
 )
 
 var MagicNumber = [2]byte{'R', 'C'}

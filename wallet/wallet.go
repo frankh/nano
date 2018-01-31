@@ -4,11 +4,11 @@ import (
 	"encoding/hex"
 
 	"github.com/frankh/crypto/ed25519"
-	"github.com/frankh/rai"
-	"github.com/frankh/rai/address"
-	"github.com/frankh/rai/blocks"
-	"github.com/frankh/rai/store"
-	"github.com/frankh/rai/uint128"
+	"github.com/frankh/nano"
+	"github.com/frankh/nano/address"
+	"github.com/frankh/nano/blocks"
+	"github.com/frankh/nano/store"
+	"github.com/frankh/nano/uint128"
 	"github.com/pkg/errors"
 )
 
@@ -16,11 +16,11 @@ type Wallet struct {
 	privateKey ed25519.PrivateKey
 	PublicKey  ed25519.PublicKey
 	Head       blocks.Block
-	Work       *rai.Work
-	PoWchan    chan rai.Work
+	Work       *nano.Work
+	PoWchan    chan nano.Work
 }
 
-func (w *Wallet) Address() rai.Account {
+func (w *Wallet) Address() nano.Account {
 	return address.PubKeyToAddress(w.PublicKey)
 }
 
@@ -73,11 +73,11 @@ func (w *Wallet) GeneratePoWAsync() error {
 		return errors.Errorf("Already generating PoW")
 	}
 
-	w.PoWchan = make(chan rai.Work)
+	w.PoWchan = make(chan nano.Work)
 
-	go func(c chan rai.Work, w *Wallet) {
+	go func(c chan nano.Work, w *Wallet) {
 		if w.Head == nil {
-			c <- blocks.GenerateWorkForHash(rai.BlockHash(hex.EncodeToString(w.PublicKey)))
+			c <- blocks.GenerateWorkForHash(nano.BlockHash(hex.EncodeToString(w.PublicKey)))
 		} else {
 			c <- blocks.GenerateWork(w.Head)
 		}
@@ -95,7 +95,7 @@ func (w *Wallet) GetBalance() uint128.Uint128 {
 
 }
 
-func (w *Wallet) Open(source rai.BlockHash, representative rai.Account) (*blocks.OpenBlock, error) {
+func (w *Wallet) Open(source nano.BlockHash, representative nano.Account) (*blocks.OpenBlock, error) {
 	if w.Head != nil {
 		return nil, errors.Errorf("Cannot open a non empty account")
 	}
@@ -136,7 +136,7 @@ func (w *Wallet) Open(source rai.BlockHash, representative rai.Account) (*blocks
 	return &block, nil
 }
 
-func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.SendBlock, error) {
+func (w *Wallet) Send(destination nano.Account, amount uint128.Uint128) (*blocks.SendBlock, error) {
 	if w.Head == nil {
 		return nil, errors.Errorf("Cannot send from empty account")
 	}
@@ -167,7 +167,7 @@ func (w *Wallet) Send(destination rai.Account, amount uint128.Uint128) (*blocks.
 	return &block, nil
 }
 
-func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
+func (w *Wallet) Receive(source nano.BlockHash) (*blocks.ReceiveBlock, error) {
 	if w.Head == nil {
 		return nil, errors.Errorf("Cannot receive to empty account")
 	}
@@ -207,7 +207,7 @@ func (w *Wallet) Receive(source rai.BlockHash) (*blocks.ReceiveBlock, error) {
 	return &block, nil
 }
 
-func (w *Wallet) Change(representative rai.Account) (*blocks.ChangeBlock, error) {
+func (w *Wallet) Change(representative nano.Account) (*blocks.ChangeBlock, error) {
 	if w.Head == nil {
 		return nil, errors.Errorf("Cannot change on empty account")
 	}

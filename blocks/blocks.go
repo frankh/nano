@@ -7,18 +7,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/frankh/rai"
-	"github.com/frankh/rai/address"
-	"github.com/frankh/rai/uint128"
-	"github.com/frankh/rai/utils"
+	"github.com/frankh/nano"
+	"github.com/frankh/nano/address"
+	"github.com/frankh/nano/uint128"
+	"github.com/frankh/nano/utils"
 	"github.com/golang/crypto/blake2b"
 	// We've forked golang's ed25519 implementation
 	// to use blake2b instead of sha3
 	"github.com/frankh/crypto/ed25519"
 )
 
-const LiveGenesisBlockHash rai.BlockHash = "991CF190094C00F0B68E2E5F75F6BEE95A2E0BD93CEAA4A6734DB9F19B728948"
-const LiveGenesisSourceHash rai.BlockHash = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"
+const LiveGenesisBlockHash nano.BlockHash = "991CF190094C00F0B68E2E5F75F6BEE95A2E0BD93CEAA4A6734DB9F19B728948"
+const LiveGenesisSourceHash nano.BlockHash = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"
 
 var GenesisAmount uint128.Uint128 = uint128.FromInts(0xffffffffffffffff, 0xffffffffffffffff)
 var WorkThreshold = uint64(0xffffffc000000000)
@@ -54,99 +54,99 @@ const (
 
 type Block interface {
 	Type() BlockType
-	GetSignature() rai.Signature
-	GetWork() rai.Work
-	RootHash() rai.BlockHash
-	Hash() rai.BlockHash
-	PreviousBlockHash() rai.BlockHash
+	GetSignature() nano.Signature
+	GetWork() nano.Work
+	RootHash() nano.BlockHash
+	Hash() nano.BlockHash
+	PreviousBlockHash() nano.BlockHash
 }
 
 type CommonBlock struct {
-	Work      rai.Work
-	Signature rai.Signature
+	Work      nano.Work
+	Signature nano.Signature
 	Confirmed bool
 }
 
 type OpenBlock struct {
-	SourceHash     rai.BlockHash
-	Representative rai.Account
-	Account        rai.Account
+	SourceHash     nano.BlockHash
+	Representative nano.Account
+	Account        nano.Account
 	CommonBlock
 }
 
 type SendBlock struct {
-	PreviousHash rai.BlockHash
-	Destination  rai.Account
+	PreviousHash nano.BlockHash
+	Destination  nano.Account
 	Balance      uint128.Uint128
 	CommonBlock
 }
 
 type ReceiveBlock struct {
-	PreviousHash rai.BlockHash
-	SourceHash   rai.BlockHash
+	PreviousHash nano.BlockHash
+	SourceHash   nano.BlockHash
 	CommonBlock
 }
 
 type ChangeBlock struct {
-	PreviousHash   rai.BlockHash
-	Representative rai.Account
+	PreviousHash   nano.BlockHash
+	Representative nano.Account
 	CommonBlock
 }
 
-func (b *OpenBlock) Hash() rai.BlockHash {
-	return rai.BlockHashFromBytes(HashOpen(b.SourceHash, b.Representative, b.Account))
+func (b *OpenBlock) Hash() nano.BlockHash {
+	return nano.BlockHashFromBytes(HashOpen(b.SourceHash, b.Representative, b.Account))
 }
 
-func (b *ReceiveBlock) Hash() rai.BlockHash {
-	return rai.BlockHashFromBytes(HashReceive(b.PreviousHash, b.SourceHash))
+func (b *ReceiveBlock) Hash() nano.BlockHash {
+	return nano.BlockHashFromBytes(HashReceive(b.PreviousHash, b.SourceHash))
 }
 
-func (b *ChangeBlock) Hash() rai.BlockHash {
-	return rai.BlockHashFromBytes(HashChange(b.PreviousHash, b.Representative))
+func (b *ChangeBlock) Hash() nano.BlockHash {
+	return nano.BlockHashFromBytes(HashChange(b.PreviousHash, b.Representative))
 }
 
-func (b *SendBlock) Hash() rai.BlockHash {
-	return rai.BlockHashFromBytes(HashSend(b.PreviousHash, b.Destination, b.Balance))
+func (b *SendBlock) Hash() nano.BlockHash {
+	return nano.BlockHashFromBytes(HashSend(b.PreviousHash, b.Destination, b.Balance))
 }
 
-func (b *ReceiveBlock) PreviousBlockHash() rai.BlockHash {
+func (b *ReceiveBlock) PreviousBlockHash() nano.BlockHash {
 	return b.PreviousHash
 }
 
-func (b *ChangeBlock) PreviousBlockHash() rai.BlockHash {
+func (b *ChangeBlock) PreviousBlockHash() nano.BlockHash {
 	return b.PreviousHash
 }
 
-func (b *SendBlock) PreviousBlockHash() rai.BlockHash {
+func (b *SendBlock) PreviousBlockHash() nano.BlockHash {
 	return b.PreviousHash
 }
 
-func (b *OpenBlock) PreviousBlockHash() rai.BlockHash {
+func (b *OpenBlock) PreviousBlockHash() nano.BlockHash {
 	return b.SourceHash
 }
 
-func (b *OpenBlock) RootHash() rai.BlockHash {
+func (b *OpenBlock) RootHash() nano.BlockHash {
 	pub, _ := address.AddressToPub(b.Account)
-	return rai.BlockHash(hex.EncodeToString(pub))
+	return nano.BlockHash(hex.EncodeToString(pub))
 }
 
-func (b *ReceiveBlock) RootHash() rai.BlockHash {
+func (b *ReceiveBlock) RootHash() nano.BlockHash {
 	return b.PreviousHash
 }
 
-func (b *ChangeBlock) RootHash() rai.BlockHash {
+func (b *ChangeBlock) RootHash() nano.BlockHash {
 	return b.PreviousHash
 }
 
-func (b *SendBlock) RootHash() rai.BlockHash {
+func (b *SendBlock) RootHash() nano.BlockHash {
 	return b.PreviousHash
 }
 
-func (b *CommonBlock) GetSignature() rai.Signature {
+func (b *CommonBlock) GetSignature() nano.Signature {
 	return b.Signature
 }
 
-func (b *CommonBlock) GetWork() rai.Work {
+func (b *CommonBlock) GetWork() nano.Work {
 	return b.Work
 }
 
@@ -174,14 +174,14 @@ func (b *OpenBlock) VerifySignature() (bool, error) {
 
 type RawBlock struct {
 	Type           BlockType
-	Source         rai.BlockHash
-	Representative rai.Account
-	Account        rai.Account
-	Work           rai.Work
-	Signature      rai.Signature
-	Previous       rai.BlockHash
+	Source         nano.BlockHash
+	Representative nano.Account
+	Account        nano.Account
+	Work           nano.Work
+	Signature      nano.Signature
+	Previous       nano.BlockHash
 	Balance        uint128.Uint128
-	Destination    rai.Account
+	Destination    nano.Account
 }
 
 func FromJson(b []byte) (block Block) {
@@ -246,8 +246,8 @@ func (b RawBlock) Hash() (result []byte) {
 	}
 }
 
-func (b RawBlock) HashToString() (result rai.BlockHash) {
-	return rai.BlockHash(strings.ToUpper(hex.EncodeToString(b.Hash())))
+func (b RawBlock) HashToString() (result nano.BlockHash) {
+	return nano.BlockHash(strings.ToUpper(hex.EncodeToString(b.Hash())))
 }
 
 func SignMessage(private_key string, message []byte) (signature []byte) {
@@ -268,19 +268,19 @@ func HashBytes(inputs ...[]byte) (result []byte) {
 	return hash.Sum(nil)
 }
 
-func HashReceive(previous rai.BlockHash, source rai.BlockHash) (result []byte) {
+func HashReceive(previous nano.BlockHash, source nano.BlockHash) (result []byte) {
 	previous_bytes, _ := hex.DecodeString(string(previous))
 	source_bytes, _ := hex.DecodeString(string(source))
 	return HashBytes(previous_bytes, source_bytes)
 }
 
-func HashChange(previous rai.BlockHash, representative rai.Account) (result []byte) {
+func HashChange(previous nano.BlockHash, representative nano.Account) (result []byte) {
 	previous_bytes, _ := hex.DecodeString(string(previous))
 	repr_bytes, _ := address.AddressToPub(representative)
 	return HashBytes(previous_bytes, repr_bytes)
 }
 
-func HashSend(previous rai.BlockHash, destination rai.Account, balance uint128.Uint128) (result []byte) {
+func HashSend(previous nano.BlockHash, destination nano.Account, balance uint128.Uint128) (result []byte) {
 	previous_bytes, _ := hex.DecodeString(string(previous))
 	dest_bytes, _ := address.AddressToPub(destination)
 	balance_bytes := balance.GetBytes()
@@ -288,7 +288,7 @@ func HashSend(previous rai.BlockHash, destination rai.Account, balance uint128.U
 	return HashBytes(previous_bytes, dest_bytes, balance_bytes)
 }
 
-func HashOpen(source rai.BlockHash, representative rai.Account, account rai.Account) (result []byte) {
+func HashOpen(source nano.BlockHash, representative nano.Account, account nano.Account) (result []byte) {
 	source_bytes, _ := hex.DecodeString(string(source))
 	repr_bytes, _ := address.AddressToPub(representative)
 	account_bytes, _ := address.AddressToPub(account)
@@ -327,18 +327,18 @@ func ValidateBlockWork(b Block) bool {
 	return res
 }
 
-func GenerateWorkForHash(b rai.BlockHash) rai.Work {
+func GenerateWorkForHash(b nano.BlockHash) nano.Work {
 	block_hash := b.ToBytes()
 	work := []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	for {
 		if ValidateWork(block_hash, work) {
-			return rai.Work(fmt.Sprintf("%x", utils.Reversed(work)))
+			return nano.Work(fmt.Sprintf("%x", utils.Reversed(work)))
 		}
 		incrementWork(work)
 	}
 }
 
-func GenerateWork(b Block) rai.Work {
+func GenerateWork(b Block) nano.Work {
 	return GenerateWorkForHash(b.Hash())
 }
 
