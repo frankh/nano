@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/utils"
 	"github.com/golang/crypto/blake2b"

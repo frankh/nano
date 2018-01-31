@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"

@@ -2,11 +2,12 @@ package wallet
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/blocks"
 	"github.com/frankh/rai/store"
 	"github.com/frankh/rai/uint128"
-	"testing"
 )
 
 func TestNew(t *testing.T) {

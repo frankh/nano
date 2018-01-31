@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
 	"github.com/frankh/rai/uint128"
 	"github.com/frankh/rai/utils"
 	"github.com/golang/crypto/blake2b"
-	"strings"
 	// We've forked golang's ed25519 implementation
 	// to use blake2b instead of sha3
 	"github.com/frankh/crypto/ed25519"

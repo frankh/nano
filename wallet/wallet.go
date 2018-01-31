@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/hex"
+
 	"github.com/frankh/crypto/ed25519"
 	"github.com/frankh/rai"
 	"github.com/frankh/rai/address"
