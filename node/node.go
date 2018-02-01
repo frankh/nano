@@ -59,16 +59,9 @@ type MessageKeepAlive struct {
 	Peers []Peer
 }
 
-type MessageConfirmReqOpen struct {
+type MessageConfirmAck struct {
 	MessageHeader
 	MessageVote
-}
-
-type MessageVote struct {
-	Account   [32]byte
-	Signature [64]byte
-	Sequence  [8]byte
-	MessageBlock
 }
 
 type MessagePublish struct {
@@ -191,6 +184,37 @@ func (m *MessageKeepAlive) Write(buf *bytes.Buffer) error {
 	return nil
 }
 
+func (m *MessageConfirmAck) Read(buf *bytes.Buffer) error {
+	err := m.MessageHeader.ReadHeader(buf)
+	if err != nil {
+		return err
+	}
+
+	if m.MessageHeader.MessageType != Message_confirm_ack {
+		return errors.New("Tried to read wrong message type")
+	}
+	err = m.MessageVote.Read(m.MessageHeader.BlockType, buf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MessageConfirmAck) Write(buf *bytes.Buffer) error {
+	err := m.MessageHeader.WriteHeader(buf)
+	if err != nil {
+		return err
+	}
+
+	err = m.MessageVote.Write(buf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *MessagePublish) Read(buf *bytes.Buffer) error {
 	err := m.MessageHeader.ReadHeader(buf)
 	if err != nil {
@@ -201,6 +225,20 @@ func (m *MessagePublish) Read(buf *bytes.Buffer) error {
 		return errors.New("Tried to read wrong message type")
 	}
 	err = m.MessageBlock.Read(m.MessageHeader.BlockType, buf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MessagePublish) Write(buf *bytes.Buffer) error {
+	err := m.MessageHeader.WriteHeader(buf)
+	if err != nil {
+		return err
+	}
+
+	err = m.MessageBlock.Write(buf)
 	if err != nil {
 		return err
 	}
