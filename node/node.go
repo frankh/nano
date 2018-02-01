@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 
-	"github.com/frankh/nano/blocks"
 	"github.com/frankh/nano/store"
 )
 
@@ -60,30 +59,21 @@ type MessageKeepAlive struct {
 	Peers []Peer
 }
 
-type MessagePublishOpen struct {
+type MessageConfirmReqOpen struct {
 	MessageHeader
-	MessageBlockOpen
+	MessageVote
 }
 
-type MessagePublishSend struct {
-	MessageHeader
-	MessageBlockSend
+type MessageVote struct {
+	Account   [32]byte
+	Signature [64]byte
+	Sequence  [8]byte
+	MessageBlock
 }
 
-type MessagePublishReceive struct {
+type MessagePublish struct {
 	MessageHeader
-	MessageBlockReceive
-}
-
-type MessagePublishChange struct {
-	MessageHeader
-	MessageBlockChange
-}
-
-type MessagePublish interface {
-	Read(*bytes.Buffer) error
-	Write(*bytes.Buffer) error
-	ToBlock() blocks.Block
+	MessageBlock
 }
 
 func CreateKeepAlive(peers []Peer) *MessageKeepAlive {
@@ -118,7 +108,8 @@ func handleMessage(buf *bytes.Buffer) {
 		}
 		log.Println("Read keepalive")
 	case Message_publish:
-		m, err := readMessagePublish(buf)
+		var m MessagePublish
+		err := m.Read(buf)
 		if err != nil {
 			log.Printf("Failed to read publish: %s", err)
 		} else {
@@ -200,54 +191,21 @@ func (m *MessageKeepAlive) Write(buf *bytes.Buffer) error {
 	return nil
 }
 
-func readMessagePublish(buf *bytes.Buffer) (MessagePublish, error) {
-	var header MessageHeader
-	err := header.ReadHeader(buf)
+func (m *MessagePublish) Read(buf *bytes.Buffer) error {
+	err := m.MessageHeader.ReadHeader(buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if header.MessageType != Message_publish {
-		return nil, errors.New("Tried to read wrong message type")
+	if m.MessageHeader.MessageType != Message_publish {
+		return errors.New("Tried to read wrong message type")
 	}
-
-	m, err := messagePublishForHeader(header)
+	err = m.MessageBlock.Read(m.MessageHeader.BlockType, buf)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = m.Read(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func messagePublishForHeader(header MessageHeader) (MessagePublish, error) {
-	var m MessagePublish
-	switch header.BlockType {
-	case BlockType_send:
-		var message MessagePublishSend
-		message.MessageHeader = header
-		m = &message
-	case BlockType_receive:
-		var message MessagePublishReceive
-		message.MessageHeader = header
-		m = &message
-	case BlockType_open:
-		var message MessagePublishOpen
-		message.MessageHeader = header
-		m = &message
-	case BlockType_change:
-		var message MessagePublishChange
-		message.MessageHeader = header
-		m = &message
-	default:
-		return nil, errors.New("Unknown block type")
-	}
-
-	return m, nil
+	return nil
 }
 
 func (m *MessageHeader) WriteHeader(buf *bytes.Buffer) error {
@@ -297,108 +255,5 @@ func (m *MessageHeader) ReadHeader(buf *bytes.Buffer) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func (m *MessagePublishOpen) Read(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_open {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockOpen.Read(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessagePublishOpen) Write(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_open {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockOpen.Write(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessagePublishSend) Read(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_send {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockSend.Read(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessagePublishSend) Write(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_send {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockSend.Write(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-func (m *MessagePublishReceive) Read(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_receive {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockReceive.Read(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessagePublishReceive) Write(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_receive {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockReceive.Write(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessagePublishChange) Read(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_change {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockChange.Read(buf)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (m *MessagePublishChange) Write(buf *bytes.Buffer) error {
-	if m.MessageHeader.BlockType != BlockType_change {
-		return errors.New(fmt.Sprintf("Wrong blocktype %d", m.MessageHeader.BlockType))
-	}
-	err := m.MessageBlockChange.Write(buf)
-
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

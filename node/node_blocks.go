@@ -17,29 +17,12 @@ type MessageBlockCommon struct {
 	Work      [8]byte
 }
 
-type MessageBlockOpen struct {
-	Source         [32]byte
-	Representative [32]byte
-	Account        [32]byte
-	MessageBlockCommon
-}
-
-type MessageBlockSend struct {
-	Previous    [32]byte
-	Destination [32]byte
-	Balance     [16]byte
-	MessageBlockCommon
-}
-
-type MessageBlockReceive struct {
-	Previous [32]byte
-	Source   [32]byte
-	MessageBlockCommon
-}
-
-type MessageBlockChange struct {
-	Previous       [32]byte
-	Representative [32]byte
+type MessageBlock struct {
+	Type             byte
+	SourceOrPrevious [32]byte // Source for open, previous for others
+	RepDestOrSource  [32]byte // Rep for open/change, dest for send, source for receive
+	Account          [32]byte // Account for open
+	Balance          [16]byte // Balance for send
 	MessageBlockCommon
 }
 
@@ -91,143 +74,72 @@ func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
 	return nil
 }
 
-func (m *MessageBlockOpen) ToBlock() blocks.Block {
+func (m *MessageBlock) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
 		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
 		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
-	block := blocks.OpenBlock{
-		nano.BlockHash(hex.EncodeToString(m.Source[:])),
-		address.PubKeyToAddress(m.Representative[:]),
-		address.PubKeyToAddress(m.Account[:]),
-		common,
+	switch m.Type {
+	case BlockType_open:
+		block := blocks.OpenBlock{
+			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			address.PubKeyToAddress(m.RepDestOrSource[:]),
+			address.PubKeyToAddress(m.Account[:]),
+			common,
+		}
+		return &block
+	case BlockType_send:
+		block := blocks.SendBlock{
+			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			address.PubKeyToAddress(m.RepDestOrSource[:]),
+			uint128.FromBytes(m.Balance[:]),
+			common,
+		}
+		return &block
+	case BlockType_receive:
+		block := blocks.ReceiveBlock{
+			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			nano.BlockHash(hex.EncodeToString(m.RepDestOrSource[:])),
+			common,
+		}
+		return &block
+	case BlockType_change:
+		block := blocks.ChangeBlock{
+			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			address.PubKeyToAddress(m.RepDestOrSource[:]),
+			common,
+		}
+		return &block
+	default:
+		return nil
 	}
-
-	return &block
 }
 
-func (m *MessageBlockSend) ToBlock() blocks.Block {
-	common := blocks.CommonBlock{
-		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
-		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
+func (m *MessageBlock) Read(messageBlockType byte, buf *bytes.Buffer) error {
+	m.Type = messageBlockType
+
+	n1, err1 := buf.Read(m.SourceOrPrevious[:])
+	n2, err2 := buf.Read(m.RepDestOrSource[:])
+
+	if messageBlockType == BlockType_open {
+		n, err := buf.Read(m.Account[:])
+		if err != nil || n != 32 {
+			return errors.New("Failed to read account")
+		}
 	}
 
-	block := blocks.SendBlock{
-		nano.BlockHash(hex.EncodeToString(m.Previous[:])),
-		address.PubKeyToAddress(m.Destination[:]),
-		uint128.FromBytes(m.Balance[:]),
-		common,
+	if messageBlockType == BlockType_send {
+		n, err := buf.Read(m.Balance[:])
+		if err != nil || n != 16 {
+			return errors.New("Failed to read balance")
+		}
 	}
 
-	return &block
-}
-
-func (m *MessageBlockReceive) ToBlock() blocks.Block {
-	common := blocks.CommonBlock{
-		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
-		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
-	}
-
-	block := blocks.ReceiveBlock{
-		nano.BlockHash(hex.EncodeToString(m.Previous[:])),
-		nano.BlockHash(hex.EncodeToString(m.Source[:])),
-		common,
-	}
-
-	return &block
-}
-
-func (m *MessageBlockChange) ToBlock() blocks.Block {
-	common := blocks.CommonBlock{
-		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
-		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
-	}
-
-	block := blocks.ChangeBlock{
-		nano.BlockHash(hex.EncodeToString(m.Previous[:])),
-		address.PubKeyToAddress(m.Representative[:]),
-		common,
-	}
-
-	return &block
-}
-
-func (m *MessageBlockOpen) Read(buf *bytes.Buffer) error {
-	n1, err1 := buf.Read(m.Source[:])
-	n2, err2 := buf.Read(m.Representative[:])
-	n3, err3 := buf.Read(m.Account[:])
-	err4 := m.MessageBlockCommon.ReadCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
-		return errors.New("Failed to read header")
-	}
-
-	if n1 != 32 || n2 != 32 || n3 != 32 {
-		return errors.New("Wrong number of bytes read")
-	}
-
-	return nil
-}
-
-func (m *MessageBlockOpen) Write(buf *bytes.Buffer) error {
-	n1, err1 := buf.Write(m.Source[:])
-	n2, err2 := buf.Write(m.Representative[:])
-	n3, err3 := buf.Write(m.Account[:])
-	err4 := m.MessageBlockCommon.WriteCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
-		return errors.New("Failed to write header")
-	}
-
-	if n1 != 32 || n2 != 32 || n3 != 32 {
-		return errors.New("Wrong number of bytes written")
-	}
-
-	return nil
-}
-
-func (m *MessageBlockSend) Read(buf *bytes.Buffer) error {
-	n1, err1 := buf.Read(m.Previous[:])
-	n2, err2 := buf.Read(m.Destination[:])
-	n3, err3 := buf.Read(m.Balance[:])
-	err4 := m.MessageBlockCommon.ReadCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
-		return errors.New("Failed to read header")
-	}
-
-	if n1 != 32 || n2 != 32 || n3 != 16 {
-		return errors.New("Wrong number of bytes read")
-	}
-
-	return nil
-}
-
-func (m *MessageBlockSend) Write(buf *bytes.Buffer) error {
-	n1, err1 := buf.Write(m.Previous[:])
-	n2, err2 := buf.Write(m.Destination[:])
-	n3, err3 := buf.Write(m.Balance[:])
-	err4 := m.MessageBlockCommon.WriteCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
-		return errors.New("Failed to write header")
-	}
-
-	if n1 != 32 || n2 != 32 || n3 != 16 {
-		return errors.New("Wrong number of bytes written")
-	}
-
-	return nil
-}
-
-func (m *MessageBlockReceive) Read(buf *bytes.Buffer) error {
-	n1, err1 := buf.Read(m.Previous[:])
-	n2, err2 := buf.Read(m.Source[:])
 	err3 := m.MessageBlockCommon.ReadCommon(buf)
 
 	if err1 != nil || err2 != nil || err3 != nil {
-		return errors.New("Failed to read header")
+		return errors.New("Failed to read block")
 	}
 
 	if n1 != 32 || n2 != 32 {
@@ -237,45 +149,28 @@ func (m *MessageBlockReceive) Read(buf *bytes.Buffer) error {
 	return nil
 }
 
-func (m *MessageBlockReceive) Write(buf *bytes.Buffer) error {
-	n1, err1 := buf.Write(m.Previous[:])
-	n2, err2 := buf.Write(m.Source[:])
+func (m *MessageBlock) Write(buf *bytes.Buffer) error {
+	n1, err1 := buf.Write(m.SourceOrPrevious[:])
+	n2, err2 := buf.Write(m.RepDestOrSource[:])
+
+	if m.Type == BlockType_open {
+		n, err := buf.Write(m.Account[:])
+		if err != nil || n != 32 {
+			return errors.New("Failed to write account")
+		}
+	}
+
+	if m.Type == BlockType_send {
+		n, err := buf.Write(m.Balance[:])
+		if err != nil || n != 16 {
+			return errors.New("Failed to write balance")
+		}
+	}
+
 	err3 := m.MessageBlockCommon.WriteCommon(buf)
 
 	if err1 != nil || err2 != nil || err3 != nil {
-		return errors.New("Failed to write header")
-	}
-
-	if n1 != 32 || n2 != 32 {
-		return errors.New("Wrong number of bytes written")
-	}
-
-	return nil
-}
-
-func (m *MessageBlockChange) Read(buf *bytes.Buffer) error {
-	n1, err1 := buf.Read(m.Previous[:])
-	n2, err2 := buf.Read(m.Representative[:])
-	err3 := m.MessageBlockCommon.ReadCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil {
-		return errors.New("Failed to read change block")
-	}
-
-	if n1 != 32 || n2 != 32 {
-		return errors.New("Wrong number of bytes read")
-	}
-
-	return nil
-}
-
-func (m *MessageBlockChange) Write(buf *bytes.Buffer) error {
-	n1, err1 := buf.Write(m.Previous[:])
-	n2, err2 := buf.Write(m.Representative[:])
-	err3 := m.MessageBlockCommon.WriteCommon(buf)
-
-	if err1 != nil || err2 != nil || err3 != nil {
-		return errors.New("Failed to write change block")
+		return errors.New("Failed to write block")
 	}
 
 	if n1 != 32 || n2 != 32 {
