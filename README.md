@@ -39,6 +39,10 @@ Milestones
         * ~Basic wallet functions~
         * Networking
             * Receiving keepalives and blocks
+                - ~keepalives~
+                - ~publish~
+                - confirm_req
+                - confirm_ack
             * Sending keepalives
     * Add broadcasting and discovery
     * Add RPC interface
