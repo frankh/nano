@@ -114,6 +114,15 @@ func handleMessage(buf *bytes.Buffer) {
 			log.Println("Read publish")
 			store.StoreBlock(m.ToBlock())
 		}
+	case Message_confirm_ack:
+		var m MessageConfirmAck
+		err := m.Read(buf)
+		if err != nil {
+			log.Printf("Failed to read confirm: %s", err)
+		} else {
+			log.Println("Read confirm")
+			store.StoreBlock(m.ToBlock())
+		}
 	default:
 		log.Printf("Ignored message. Cannot handle message type %d\n", header.MessageType)
 	}
