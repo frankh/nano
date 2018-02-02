@@ -23,6 +23,7 @@ var publishWrongWork, _ = hex.DecodeString("5242050501030005611A6FA8736497E6C1BD
 var keepAlive, _ = hex.DecodeString("524305050102000000000000000000000000FFFF49B13E26A31B00000000000000000000FFFF637887DF340400000000000000000000FFFFCC2C6D15A31B00000000000000000000FFFF5EC16857239C00000000000000000000FFFF23BD2D1FA31B00000000000000000000FFFF253B710AA31B00000000000000000000FFFF50740256A7E500000000000000000000FFFF4631D644A31B")
 
 var confirmAck, _ = hex.DecodeString("524305050105000289aaf8e5f19f60ebc9476f382dbee256deae2695b47934700d9aad49d86ccb249ceb5c2840fe3fdf2dcb9c40e142181e7bd158d07ca3f8388dc3b3c0acd395d85b38e04ce1dac45b070957046d31eb7f58caaa777a5e13d85fe2aae7514b490e9c1dd00100000000aef053ab1832d41df356290a704e6c6c47787c6da4710ee2399e60e0ab607e9e51380a2c22710ed4018392474228b4e7c80f1c6714dcc3c9ef4befa563ecc35905bd9a62bd5b7ebdc5ebc9f576392e00445a07742dc4b2bc1355aef245522b19ae5640985f7759954ebf5147a125fec7e9f1973cf1d2a9d182c9223392b4cc10cdb11bca27c455ec8b13f4482b506d02576cfad0046c5f1c")
+var confirmReq, _ = hex.DecodeString("52430505010400030c32f8cac423ec13236e09db435a18471ef39274959e6f8b44f005577614190e6e470adf874730bb15f067e04ec4ccd77426e69166a72d57d592a4e15eff1df97560262045e5a612c015205a5e73a53fe3775bd5809f6723641b31c7b103ebb30adc93932c7fba8c0a29d8ca1fb22514a2490552dcdb028401975cd8c9014b0fccd88343ef983eae")
 
 func TestReadWriteMessageKeepAlive(t *testing.T) {
 	var message MessageKeepAlive
@@ -85,6 +86,30 @@ func TestReadWriteConfirmAck(t *testing.T) {
 	publicKey := ed25519.PublicKey(m.Account[:])
 	if !ed25519.Verify(publicKey, m.MessageVote.Hash(), m.Signature[:]) {
 		t.Errorf("Failed to validate signature")
+	}
+}
+
+func TestReadWriteConfirmReq(t *testing.T) {
+	var m MessageConfirmReq
+	buf := bytes.NewBuffer(confirmReq)
+	err := m.Read(buf)
+	if err != nil {
+		t.Errorf("Failed to read message")
+	}
+
+	var writeBuf bytes.Buffer
+	err = m.Write(&writeBuf)
+	if err != nil {
+		t.Errorf("Failed to write message")
+	}
+
+	if bytes.Compare(confirmReq, writeBuf.Bytes()) != 0 {
+		t.Errorf("Wrote message badly")
+	}
+
+	block := m.ToBlock().(*blocks.ReceiveBlock)
+	if !blocks.ValidateBlockWork(block) {
+		t.Errorf("Work validation failed")
 	}
 }
 

@@ -64,6 +64,11 @@ type MessageConfirmAck struct {
 	MessageVote
 }
 
+type MessageConfirmReq struct {
+	MessageHeader
+	MessageBlock
+}
+
 type MessagePublish struct {
 	MessageHeader
 	MessageBlock
@@ -208,6 +213,37 @@ func (m *MessageConfirmAck) Write(buf *bytes.Buffer) error {
 	}
 
 	err = m.MessageVote.Write(buf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MessageConfirmReq) Read(buf *bytes.Buffer) error {
+	err := m.MessageHeader.ReadHeader(buf)
+	if err != nil {
+		return err
+	}
+
+	if m.MessageHeader.MessageType != Message_confirm_req {
+		return errors.New("Tried to read wrong message type")
+	}
+	err = m.MessageBlock.Read(m.MessageHeader.BlockType, buf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MessageConfirmReq) Write(buf *bytes.Buffer) error {
+	err := m.MessageHeader.WriteHeader(buf)
+	if err != nil {
+		return err
+	}
+
+	err = m.MessageBlock.Write(buf)
 	if err != nil {
 		return err
 	}
