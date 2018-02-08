@@ -89,6 +89,10 @@ func (p *Peer) Addr() *net.UDPAddr {
 	return addr
 }
 
+func (p *Peer) String() string {
+	return fmt.Sprintf("%s:%d", p.IP.String(), p.Port)
+}
+
 func handleMessage(buf *bytes.Buffer) {
 	var header MessageHeader
 	header.ReadHeader(bytes.NewBuffer(buf.Bytes()))
@@ -105,13 +109,16 @@ func handleMessage(buf *bytes.Buffer) {
 			log.Printf("Failed to read keepalive: %s", err)
 		}
 		log.Println("Read keepalive")
+		err = m.Handle()
+		if err != nil {
+			log.Printf("Failed to handle keepalive")
+		}
 	case Message_publish:
 		var m MessagePublish
 		err := m.Read(buf)
 		if err != nil {
 			log.Printf("Failed to read publish: %s", err)
 		} else {
-			log.Println("Read publish")
 			store.StoreBlock(m.ToBlock())
 		}
 	case Message_confirm_ack:
@@ -120,7 +127,6 @@ func handleMessage(buf *bytes.Buffer) {
 		if err != nil {
 			log.Printf("Failed to read confirm: %s", err)
 		} else {
-			log.Println("Read confirm")
 			store.StoreBlock(m.ToBlock())
 		}
 	default:
@@ -129,9 +135,13 @@ func handleMessage(buf *bytes.Buffer) {
 }
 
 func (m *MessageKeepAlive) Handle() error {
-	// for _, peer := range m.Peers {
-
-	// }
+	for _, peer := range m.Peers {
+		if !PeerSet[peer.String()] {
+			PeerSet[peer.String()] = true
+			PeerList = append(PeerList, peer)
+			log.Printf("Added new peer to list: %s, now %d peers", peer.String(), len(PeerList))
+		}
+	}
 	return nil
 }
 

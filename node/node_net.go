@@ -10,10 +10,13 @@ import (
 const packetSize = 512
 const numberOfPeersToShare = 8
 
-var PeerList = []Peer{Peer{
+var DefaultPeer = Peer{
 	net.ParseIP("::ffff:192.168.0.70"),
 	7075,
-}}
+}
+
+var PeerList = []Peer{DefaultPeer}
+var PeerSet = map[string]bool{DefaultPeer.String(): true}
 
 func ListenForUdp() {
 	log.Printf("Listening for udp packets on 7075")
@@ -30,7 +33,6 @@ func ListenForUdp() {
 			continue
 		}
 		if n > 0 {
-			log.Printf("Read message len %d: %x", n, buf[:n])
 			handleMessage(bytes.NewBuffer(buf[:n]))
 		}
 	}
