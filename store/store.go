@@ -305,9 +305,11 @@ func storeBlock(conn *sql.DB, block blocks.Block) error {
 		return errors.New("Unknown block type")
 	}
 
-	if fetchBlock(conn, block.RootHash()) == nil {
-		unconnectedBlockPool[block.PreviousBlockHash()] = block
-		log.Printf("Added block to unconnected pool, now %d", len(unconnectedBlockPool))
+	if fetchBlock(conn, block.PreviousBlockHash()) == nil {
+		if unconnectedBlockPool[block.PreviousBlockHash()] == nil {
+			unconnectedBlockPool[block.PreviousBlockHash()] = block
+			log.Printf("Added block to unconnected pool, now %d", len(unconnectedBlockPool))
+		}
 		return errors.New("Cannot find parent block")
 	}
 
