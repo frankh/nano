@@ -1,15 +1,17 @@
 package store
 
 import (
-	"database/sql"
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"log"
 	"sync"
 
-	"github.com/frankh/nano"
+	"github.com/dgraph-io/badger"
+	"github.com/frankh/nano/address"
 	"github.com/frankh/nano/blocks"
+	"github.com/frankh/nano/types"
 	"github.com/frankh/nano/uint128"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Config struct {
@@ -17,49 +19,101 @@ type Config struct {
 	GenesisBlock *blocks.OpenBlock
 }
 
+const (
+	MetaOpen byte = iota
+	MetaReceive
+	MetaSend
+	MetaChange
+)
+
+type BlockItem struct {
+	badger.Item
+}
+
+func (i *BlockItem) ToBlock() blocks.Block {
+	meta := i.UserMeta()
+	value, _ := i.Value()
+
+	dec := gob.NewDecoder(bytes.NewBuffer(value))
+	var result blocks.Block
+
+	switch meta {
+	case MetaOpen:
+		var b blocks.OpenBlock
+		dec.Decode(&b)
+		result = &b
+	case MetaReceive:
+		var b blocks.ReceiveBlock
+		dec.Decode(&b)
+		result = &b
+	case MetaSend:
+		var b blocks.SendBlock
+		dec.Decode(&b)
+		result = &b
+	case MetaChange:
+		var b blocks.ChangeBlock
+		dec.Decode(&b)
+		result = &b
+	}
+
+	return result
+}
+
 var LiveConfig = Config{
-	"db.sqlite",
+	"DATA",
 	blocks.LiveGenesisBlock,
 }
 
 var TestConfig = Config{
-	":memory:",
+	"TESTDATA",
 	blocks.TestGenesisBlock,
 }
 
 var TestConfigLive = Config{
-	":memory:",
+	"TESTDATA",
 	blocks.LiveGenesisBlock,
 }
 
 // Blocks that we cannot store due to not having their parent
 // block stored
-var unconnectedBlockPool map[nano.BlockHash]blocks.Block
+var unconnectedBlockPool map[types.BlockHash]blocks.Block
 
 var Conf *Config
-var globalConn *sql.DB
+var globalConn *badger.DB
+var currentTxn *badger.Txn
 var connLock sync.Mutex
 
-func getConn() *sql.DB {
+func getConn() *badger.Txn {
 	connLock.Lock()
+
+	if currentTxn != nil {
+		return currentTxn
+	}
+
 	if globalConn == nil {
-		conn, err := sql.Open("sqlite3", Conf.Path)
-		conn.SetMaxOpenConns(1)
+		opts := badger.DefaultOptions
+		opts.Dir = Conf.Path
+		opts.ValueDir = Conf.Path
+		conn, err := badger.Open(opts)
 		if err != nil {
 			panic(err)
 		}
 		globalConn = conn
 	}
-	return globalConn
+
+	currentTxn = globalConn.NewTransaction(true)
+	return currentTxn
 }
 
-func releaseConn(conn *sql.DB) {
+func releaseConn(conn *badger.Txn) {
+	currentTxn.Commit(nil)
+	currentTxn = nil
 	connLock.Unlock()
 }
 
 func Init(config Config) {
 	var err error
-	unconnectedBlockPool = make(map[nano.BlockHash]blocks.Block)
+	unconnectedBlockPool = make(map[types.BlockHash]blocks.Block)
 
 	if globalConn != nil {
 		globalConn.Close()
@@ -69,182 +123,48 @@ func Init(config Config) {
 	conn := getConn()
 	defer releaseConn(conn)
 
-	rows, err := conn.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name='block'`)
-	hasSchema := rows.Next()
-	rows.Close()
+	_, err = conn.Get(blocks.LiveGenesisBlockHash.ToBytes())
+
 	if err != nil {
-		panic(err)
-	}
-
-	if !hasSchema {
-		log.Println("Creating database schema")
-		prep, err := conn.Prepare(`
-      CREATE TABLE 'block' (
-        'hash' TEXT PRIMARY KEY,
-        'type' TEXT NOT NULL,
-        'account' TEXT NOT NULL DEFAULT(''),
-        'source' TEXT NOT NULL DEFAULT(''),
-        'representative' TEXT NOT NULL DEFAULT(''),
-        'previous' TEXT NOT NULL DEFAULT(''),
-        'balance' TEXT NOT NULL DEFAULT(''),
-        'destination' TEXT NOT NULL DEFAULT(''),
-        'work' TEXT NOT NULL DEFAULT(''),
-        'signature' TEXT NOT NULL DEFAULT(''),
-        'created' DATE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        'confirmed' INTEGER DEFAULT(0),
-        FOREIGN KEY(previous) REFERENCES block(hash)
-      );
-      CREATE INDEX account_index ON block(account);
-      CREATE INDEX type_index ON block(type);
-    `)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = prep.Exec()
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	rows, err = conn.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name='block'`)
-	hasSchema = rows.Next()
-	rows.Close()
-	if err != nil || !hasSchema {
-		panic(err)
-	}
-
-	rows, err = conn.Query(`SELECT hash FROM block WHERE hash=?`, blocks.LiveGenesisBlockHash)
-	hasGenesis := rows.Next()
-	rows.Close()
-	if err != nil {
-		panic(err)
-	}
-	if !hasGenesis {
 		uncheckedStoreBlock(conn, config.GenesisBlock)
 	}
-	log.Printf("Finished init db")
-
 }
 
-func FetchOpen(account nano.Account) (b *blocks.OpenBlock) {
+func FetchOpen(account types.Account) (b *blocks.OpenBlock) {
 	conn := getConn()
 	defer releaseConn(conn)
 	return fetchOpen(conn, account)
 }
 
-func fetchOpen(conn *sql.DB, account nano.Account) (b *blocks.OpenBlock) {
-	rows, err := conn.Query(`SELECT
-    type,
-    source,
-    representative,
-    account,
-    work,
-    signature,
-    previous,
-    balance,
-    destination
-  FROM block WHERE type=? and account=?`, blocks.Open, account)
-	defer rows.Close()
-
+func fetchOpen(conn *badger.Txn, account types.Account) (b *blocks.OpenBlock) {
+	account_bytes, err := address.AddressToPub(account)
 	if err != nil {
-		panic(err)
-	}
-
-	if !rows.Next() {
 		return nil
 	}
 
-	return blockFromRow(rows).(*blocks.OpenBlock)
+	item, err := conn.Get(account_bytes)
+	if err != nil {
+		return nil
+	}
+
+	blockItem := BlockItem{*item}
+	return blockItem.ToBlock().(*blocks.OpenBlock)
 }
 
-func FetchBlock(hash nano.BlockHash) (b blocks.Block) {
+func FetchBlock(hash types.BlockHash) (b blocks.Block) {
 	conn := getConn()
 	defer releaseConn(conn)
 	return fetchBlock(conn, hash)
 }
 
-func fetchBlock(conn *sql.DB, hash nano.BlockHash) (b blocks.Block) {
-	rows, err := conn.Query(`SELECT
-    type,
-    source,
-    representative,
-    account,
-    work,
-    signature,
-    previous,
-    balance,
-    destination
-  FROM block WHERE hash=?`, hash)
-	defer rows.Close()
-
+func fetchBlock(conn *badger.Txn, hash types.BlockHash) (b blocks.Block) {
+	item, err := conn.Get(hash.ToBytes())
 	if err != nil {
-		panic(err)
-	}
-
-	if !rows.Next() {
 		return nil
 	}
 
-	return blockFromRow(rows)
-}
-
-func blockFromRow(rows *sql.Rows) (b blocks.Block) {
-	var block_type blocks.BlockType
-	var source nano.BlockHash
-	var representative nano.Account
-	var account nano.Account
-	var work nano.Work
-	var signature nano.Signature
-	var previous nano.BlockHash
-	var balance string
-	var destination nano.Account
-
-	err := rows.Scan(
-		&block_type,
-		&source,
-		&representative,
-		&account,
-		&work,
-		&signature,
-		&previous,
-		&balance,
-		&destination,
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	common := blocks.CommonBlock{
-		Work:      work,
-		Signature: signature,
-	}
-
-	switch block_type {
-	case blocks.Open:
-		block := blocks.OpenBlock{
-			source,
-			representative,
-			account,
-			common,
-		}
-		return &block
-	case blocks.Send:
-		balance_int, err := uint128.FromString(balance)
-		if err != nil {
-			panic(err)
-		}
-		block := blocks.SendBlock{
-			previous,
-			destination,
-			balance_int,
-			common,
-		}
-		return &block
-	default:
-		panic("Unknown block type")
-	}
+	blockItem := BlockItem{*item}
+	return blockItem.ToBlock()
 }
 
 func GetBalance(block blocks.Block) uint128.Uint128 {
@@ -253,13 +173,13 @@ func GetBalance(block blocks.Block) uint128.Uint128 {
 	return getBalance(conn, block)
 }
 
-func getSendAmount(conn *sql.DB, block *blocks.SendBlock) uint128.Uint128 {
+func getSendAmount(conn *badger.Txn, block *blocks.SendBlock) uint128.Uint128 {
 	prev := fetchBlock(conn, block.PreviousHash)
 
 	return getBalance(conn, prev).Sub(getBalance(conn, block))
 }
 
-func getBalance(conn *sql.DB, block blocks.Block) uint128.Uint128 {
+func getBalance(conn *badger.Txn, block blocks.Block) uint128.Uint128 {
 	switch block.Type() {
 	case blocks.Open:
 		b := block.(*blocks.OpenBlock)
@@ -296,7 +216,7 @@ func StoreBlock(block blocks.Block) error {
 	return storeBlock(conn, block)
 }
 
-func storeBlock(conn *sql.DB, block blocks.Block) error {
+func storeBlock(conn *badger.Txn, block blocks.Block) error {
 	if !blocks.ValidateBlockWork(block) {
 		return errors.New("Invalid work for block")
 	}
@@ -326,124 +246,51 @@ func storeBlock(conn *sql.DB, block blocks.Block) error {
 	return nil
 }
 
-func uncheckedStoreBlock(conn *sql.DB, block blocks.Block) {
+func uncheckedStoreBlock(conn *badger.Txn, block blocks.Block) {
+	var buf bytes.Buffer
+	var meta byte
+	enc := gob.NewEncoder(&buf)
 	switch block.Type() {
 	case blocks.Open:
-		prep, err := conn.Prepare(`
-      INSERT INTO block (
-        hash,
-        type,
-        source,
-        representative,
-        account,
-        work,
-        signature
-      ) values (
-        ?,
-        'open',
-        ?,
-        ?,
-        ?,
-        ?,
-        ?
-      )
-    `)
-
+		b := block.(*blocks.OpenBlock)
+		meta = MetaOpen
+		err := enc.Encode(b)
 		if err != nil {
 			panic(err)
 		}
-
-		b := block.(*blocks.OpenBlock)
-
-		_, err = prep.Exec(
-			b.Hash(),
-			b.SourceHash,
-			b.Representative,
-			b.Account,
-			b.Work,
-			b.Signature,
-		)
-
+		// Open blocks need to be stored twice, once keyed on account,
+		// once keyed on hash.
+		err = conn.SetWithMeta(b.RootHash().ToBytes(), buf.Bytes(), meta)
 		if err != nil {
 			panic(err)
 		}
 	case blocks.Send:
-		prep, err := conn.Prepare(`
-      INSERT INTO block (
-        hash,
-        type,
-        previous,
-        balance,
-        destination,
-        work,
-        signature
-      ) values (
-        ?,
-        'send',
-        ?,
-        ?,
-        ?,
-        ?,
-        ?
-      )
-    `)
-
-		if err != nil {
-			panic(err)
-		}
-
 		b := block.(*blocks.SendBlock)
-
-		_, err = prep.Exec(
-			b.Hash(),
-			b.PreviousHash,
-			b.Balance.String(),
-			b.Destination,
-			b.Work,
-			b.Signature,
-		)
-
+		meta = MetaSend
+		err := enc.Encode(b)
 		if err != nil {
 			panic(err)
 		}
 	case blocks.Receive:
-		prep, err := conn.Prepare(`
-      INSERT INTO block (
-        hash,
-        type,
-        previous,
-        source,
-        work,
-        signature
-      ) values (
-        ?,
-        'receive',
-        ?,
-        ?,
-        ?,
-        ?
-      )
-    `)
-
-		if err != nil {
-			panic(err)
-		}
-
 		b := block.(*blocks.ReceiveBlock)
-
-		_, err = prep.Exec(
-			b.Hash(),
-			b.PreviousHash,
-			b.SourceHash,
-			b.Work,
-			b.Signature,
-		)
-
+		meta = MetaReceive
+		err := enc.Encode(b)
 		if err != nil {
 			panic(err)
 		}
-
+	case blocks.Change:
+		b := block.(*blocks.ChangeBlock)
+		meta = MetaChange
+		err := enc.Encode(b)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		panic("Unknown block type")
+	}
+
+	err := conn.SetWithMeta(block.Hash().ToBytes(), buf.Bytes(), meta)
+	if err != nil {
+		panic("Failed to store block")
 	}
 }

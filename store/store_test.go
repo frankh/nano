@@ -1,6 +1,7 @@
 package store
 
 import (
+	"os"
 	"testing"
 
 	"github.com/frankh/nano/blocks"
@@ -9,6 +10,7 @@ import (
 func TestInit(t *testing.T) {
 	Init(TestConfigLive)
 
+	os.RemoveAll(TestConfigLive.Path)
 }
 
 func TestGenesisBalance(t *testing.T) {
@@ -19,6 +21,7 @@ func TestGenesisBalance(t *testing.T) {
 	if GetBalance(block).String() != "ffffffffffffffffffffffffffffffff" {
 		t.Errorf("Genesis block has invalid initial balance")
 	}
+	os.RemoveAll(TestConfigLive.Path)
 }
 
 func TestMissingBlock(t *testing.T) {
@@ -29,4 +32,5 @@ func TestMissingBlock(t *testing.T) {
 	if block != nil {
 		t.Errorf("Found live genesis on test config")
 	}
+	os.RemoveAll(TestConfig.Path)
 }

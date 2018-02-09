@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/frankh/crypto/ed25519"
-	"github.com/frankh/nano"
 	"github.com/frankh/nano/blocks"
 	"github.com/frankh/nano/store"
+	"github.com/frankh/nano/types"
 )
 
 var publishSend, _ = hex.DecodeString("5243050501030002B6460102018F076CC32FF2F65AD397299C47F8CA2BE784D5DE394D592C22BE8BFFBE91872F1D2A2BCC1CB47FB854D6D31E43C6391EADD5750BB9689E5DF0D6CB0000003D11C83DBCFF748EB4B7F7A3C059DDEEE5C8ECCC8F20DEF3AF3C4F0726F879082ED051D0C62A54CD69C4A66B020369B7033C5B0F77654173AB24D5C7A64CC4FFF0BDB368FCC989E41A656569047627C49A2A6D2FBC")
@@ -141,7 +141,7 @@ func TestReadWriteMessagePublish(t *testing.T) {
 	}
 }
 
-func validateTestBlock(t *testing.T, b blocks.Block, expectedHash nano.BlockHash) {
+func validateTestBlock(t *testing.T, b blocks.Block, expectedHash types.BlockHash) {
 	if b.Hash() != expectedHash {
 		t.Errorf("Wrong blockhash %s", b.Hash())
 	}
@@ -162,25 +162,25 @@ func TestReadPublish(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to read send message %s", err)
 	}
-	validateTestBlock(t, m.ToBlock(), nano.BlockHash("687DCB9C8EB8AF9F39D8107C3432A8732EDBED1E3B5E2E0F6B86643D1EB5E24F"))
+	validateTestBlock(t, m.ToBlock(), types.BlockHash("687DCB9C8EB8AF9F39D8107C3432A8732EDBED1E3B5E2E0F6B86643D1EB5E24F"))
 
 	err = m.Read(bytes.NewBuffer(publishReceive))
 	if err != nil {
 		t.Errorf("Failed to read receive message %s", err)
 	}
-	validateTestBlock(t, m.ToBlock(), nano.BlockHash("7D3E9D79342AA73B7148CB46706D23ED8BB0041A5316D67A053F336ABF0E6B60"))
+	validateTestBlock(t, m.ToBlock(), types.BlockHash("7D3E9D79342AA73B7148CB46706D23ED8BB0041A5316D67A053F336ABF0E6B60"))
 
 	err = m.Read(bytes.NewBuffer(publishOpen))
 	if err != nil {
 		t.Errorf("Failed to read open message %s", err)
 	}
-	validateTestBlock(t, m.ToBlock(), nano.BlockHash("5F73CF212E58563734D57CCFCCEFE481DE40C96F097F594F4FA32C5585D84AA4"))
+	validateTestBlock(t, m.ToBlock(), types.BlockHash("5F73CF212E58563734D57CCFCCEFE481DE40C96F097F594F4FA32C5585D84AA4"))
 
 	err = m.Read(bytes.NewBuffer(publishChange))
 	if err != nil {
 		t.Errorf("Failed to read change message %s", err)
 	}
-	validateTestBlock(t, m.ToBlock(), nano.BlockHash("4AABA9923AC794B635B8C3CC275C37F0D28E43D44EB5E27F8B23955E335D5DD3"))
+	validateTestBlock(t, m.ToBlock(), types.BlockHash("4AABA9923AC794B635B8C3CC275C37F0D28E43D44EB5E27F8B23955E335D5DD3"))
 
 	err = m.Read(bytes.NewBuffer(publishWrongWork))
 	if blocks.ValidateBlockWork(m.ToBlock()) {

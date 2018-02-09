@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/frankh/nano"
+	"github.com/frankh/nano/types"
 	"github.com/frankh/nano/utils"
 	"github.com/golang/crypto/blake2b"
 	// We've forked golang's ed25519 implementation
@@ -20,13 +20,13 @@ const EncodeXrb = "13456789abcdefghijkmnopqrstuwxyz"
 
 var XrbEncoding = base32.NewEncoding(EncodeXrb)
 
-func ValidateAddress(account nano.Account) bool {
+func ValidateAddress(account types.Account) bool {
 	_, err := AddressToPub(account)
 
 	return err == nil
 }
 
-func AddressToPub(account nano.Account) (public_key []byte, err error) {
+func AddressToPub(account types.Account) (public_key []byte, err error) {
 	address := string(account)
 	// A valid xrb address is 64 bytes long
 	// First 4 are simply a hard-coded string xrb_ for ease of use
@@ -70,7 +70,7 @@ func GetAddressChecksum(pub ed25519.PublicKey) []byte {
 	return utils.Reversed(hash.Sum(nil))
 }
 
-func PubKeyToAddress(pub ed25519.PublicKey) nano.Account {
+func PubKeyToAddress(pub ed25519.PublicKey) types.Account {
 	// Pubkey is 256bits, base32 must be multiple of 5 bits
 	// to encode properly.
 	// Pad the start with 0's and strip them off after base32 encoding
@@ -78,7 +78,7 @@ func PubKeyToAddress(pub ed25519.PublicKey) nano.Account {
 	address := XrbEncoding.EncodeToString(padded)[4:]
 	checksum := XrbEncoding.EncodeToString(GetAddressChecksum(pub))
 
-	return nano.Account("xrb_" + address + checksum)
+	return types.Account("xrb_" + address + checksum)
 }
 
 func KeypairFromPrivateKey(private_key string) (ed25519.PublicKey, ed25519.PrivateKey) {

@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/frankh/nano"
 	"github.com/frankh/nano/address"
 	"github.com/frankh/nano/blocks"
+	"github.com/frankh/nano/types"
 	"github.com/frankh/nano/uint128"
 	"github.com/frankh/nano/utils"
 )
@@ -76,14 +76,14 @@ func (m *MessageBlockCommon) WriteCommon(buf *bytes.Buffer) error {
 
 func (m *MessageBlock) ToBlock() blocks.Block {
 	common := blocks.CommonBlock{
-		Work:      nano.Work(hex.EncodeToString(m.Work[:])),
-		Signature: nano.Signature(hex.EncodeToString(m.Signature[:])),
+		Work:      types.Work(hex.EncodeToString(m.Work[:])),
+		Signature: types.Signature(hex.EncodeToString(m.Signature[:])),
 	}
 
 	switch m.Type {
 	case BlockType_open:
 		block := blocks.OpenBlock{
-			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			types.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
 			address.PubKeyToAddress(m.RepDestOrSource[:]),
 			address.PubKeyToAddress(m.Account[:]),
 			common,
@@ -91,7 +91,7 @@ func (m *MessageBlock) ToBlock() blocks.Block {
 		return &block
 	case BlockType_send:
 		block := blocks.SendBlock{
-			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			types.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
 			address.PubKeyToAddress(m.RepDestOrSource[:]),
 			uint128.FromBytes(m.Balance[:]),
 			common,
@@ -99,14 +99,14 @@ func (m *MessageBlock) ToBlock() blocks.Block {
 		return &block
 	case BlockType_receive:
 		block := blocks.ReceiveBlock{
-			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
-			nano.BlockHash(hex.EncodeToString(m.RepDestOrSource[:])),
+			types.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			types.BlockHash(hex.EncodeToString(m.RepDestOrSource[:])),
 			common,
 		}
 		return &block
 	case BlockType_change:
 		block := blocks.ChangeBlock{
-			nano.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
+			types.BlockHash(hex.EncodeToString(m.SourceOrPrevious[:])),
 			address.PubKeyToAddress(m.RepDestOrSource[:]),
 			common,
 		}
