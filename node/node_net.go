@@ -10,11 +10,7 @@ import (
 const packetSize = 512
 const numberOfPeersToShare = 8
 
-var DefaultPeer = Peer{
-	net.ParseIP("::ffff:192.168.0.70"),
-	7075,
-}
-
+var DefaultPeer Peer
 var PeerList = []Peer{DefaultPeer}
 var PeerSet = map[string]bool{DefaultPeer.String(): true}
 
