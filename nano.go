@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/frankh/nano/node"
 	"github.com/frankh/nano/store"
 )
@@ -8,6 +10,8 @@ import (
 func main() {
 	store.Init(store.LiveConfig)
 
-	node.SendKeepAlive(node.PeerList[0])
+	keepAliveSender := node.NewAlarm(node.AlarmFn(node.SendKeepAlives), []interface{}{node.PeerList}, 20*time.Second)
 	node.ListenForUdp()
+
+	keepAliveSender.Stop()
 }
