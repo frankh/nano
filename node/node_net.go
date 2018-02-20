@@ -62,3 +62,11 @@ func SendKeepAlive(peer Peer) error {
 	outConn.Write(buf.Bytes())
 	return nil
 }
+
+func SendKeepAlives(params []interface{}) {
+	peers := params[0].([]Peer)
+	for _, peer := range peers {
+		// TODO: Handle errors
+		SendKeepAlive(peer)
+	}
+}
