@@ -10,15 +10,27 @@ import (
 const packetSize = 512
 const numberOfPeersToShare = 8
 
-var DefaultPeer = Peer{
-	net.ParseIP("::ffff:192.168.0.70"),
-	7075,
+var DefaultPeer Peer
+var PeerList []Peer
+var PeerSet map[string]bool
+var LocalIP string
+
+// Get preferred outbound ip of this machine
+func GetOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
 }
 
-var PeerList = []Peer{DefaultPeer}
-var PeerSet = map[string]bool{DefaultPeer.String(): true}
-
 func ListenForUdp() {
+	LocalIP = GetOutboundIP().String()
+
 	log.Printf("Listening for udp packets on 7075")
 	ln, err := net.ListenPacket("udp", ":7075")
 	if err != nil {
@@ -28,19 +40,21 @@ func ListenForUdp() {
 	buf := make([]byte, packetSize)
 
 	for {
-		n, _, err := ln.ReadFrom(buf)
+		n, addr, err := ln.ReadFrom(buf)
 		if err != nil {
 			continue
 		}
+
+		source := addr.(*net.UDPAddr).IP.String()
 		if n > 0 {
-			handleMessage(bytes.NewBuffer(buf[:n]))
+			handleMessage(source, bytes.NewBuffer(buf[:n]))
 		}
 	}
 }
 
 func SendKeepAlive(peer Peer) error {
 	addr := peer.Addr()
-	randomPeers := make([]Peer, 0)
+	randomPeers := make([]Peer, 0, 2)
 
 	outConn, err := net.DialUDP("udp", nil, addr)
 	if err != nil {
@@ -61,4 +75,12 @@ func SendKeepAlive(peer Peer) error {
 
 	outConn.Write(buf.Bytes())
 	return nil
+}
+
+func SendKeepAlives(params []interface{}) {
+	peers := PeerList
+	for _, peer := range peers {
+		// TODO: Handle errors
+		SendKeepAlive(peer)
+	}
 }

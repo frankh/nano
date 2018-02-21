@@ -5,7 +5,8 @@ RUN go get \
   github.com/frankh/crypto/ed25519 \
   github.com/golang/crypto/blake2b \
   github.com/pkg/errors \
-  github.com/dgraph-io/badger
+  github.com/dgraph-io/badger \
+  github.com/spf13/cobra
 
 COPY . ./
 
@@ -16,4 +17,4 @@ FROM debian:8-slim
 
 COPY --from=gobuild /go/src/github.com/frankh/nano/nano /nano
 
-ENTRYPOINT ["/nano"]
+ENTRYPOINT ["/nano", "daemon"]
