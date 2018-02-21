@@ -75,13 +75,16 @@ type MessagePublish struct {
 }
 
 func CreateKeepAlive(peers []Peer) *MessageKeepAlive {
-	var m MessageKeepAlive
+	m := new(MessageKeepAlive)
+
 	m.MessageHeader.MagicNumber = MagicNumber
 	m.MessageHeader.VersionMax = VersionMax
 	m.MessageHeader.VersionUsing = VersionUsing
 	m.MessageHeader.VersionMin = VersionMin
 	m.MessageHeader.MessageType = Message_keepalive
-	return &m
+	m.Peers = peers
+
+	return m
 }
 
 func (p *Peer) Addr() *net.UDPAddr {
@@ -93,12 +96,19 @@ func (p *Peer) String() string {
 	return fmt.Sprintf("%s:%d", p.IP.String(), p.Port)
 }
 
-func handleMessage(buf *bytes.Buffer) {
+func handleMessage(source string, buf *bytes.Buffer) {
 	var header MessageHeader
 	header.ReadHeader(bytes.NewBuffer(buf.Bytes()))
 	if header.MagicNumber != MagicNumber {
 		log.Printf("Ignored message. Wrong magic number %s", header.MagicNumber)
 		return
+	}
+
+	sourcePeer := Peer{net.ParseIP(source), 7075}
+	if !PeerSet[sourcePeer.String()] && source != LocalIP {
+		PeerSet[sourcePeer.String()] = true
+		PeerList = append(PeerList, sourcePeer)
+		log.Printf("Added new peer to list: %s, now %d peers", peer.String(), len(PeerList))
 	}
 
 	switch header.MessageType {
@@ -108,7 +118,7 @@ func handleMessage(buf *bytes.Buffer) {
 		if err != nil {
 			log.Printf("Failed to read keepalive: %s", err)
 		}
-		log.Println("Read keepalive")
+		log.Printf("Read keepalive from %s", source)
 		err = m.Handle()
 		if err != nil {
 			log.Printf("Failed to handle keepalive")
@@ -136,12 +146,17 @@ func handleMessage(buf *bytes.Buffer) {
 
 func (m *MessageKeepAlive) Handle() error {
 	for _, peer := range m.Peers {
+		if peer.IP.String() == LocalIP {
+			continue
+		}
+
 		if !PeerSet[peer.String()] {
 			PeerSet[peer.String()] = true
 			PeerList = append(PeerList, peer)
 			log.Printf("Added new peer to list: %s, now %d peers", peer.String(), len(PeerList))
 		}
 	}
+
 	return nil
 }
 

@@ -22,6 +22,8 @@ func NewAlarm(fn AlarmFn, fnParams []interface{}, d time.Duration) *Alarm {
 }
 
 func (a *Alarm) Run() {
+	a.fn(a.fnParams)
+
 	ticker := time.NewTicker(a.duration)
 	defer ticker.Stop()
 
