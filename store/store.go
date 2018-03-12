@@ -210,6 +210,8 @@ func getBalance(conn *badger.Txn, block blocks.Block) uint128.Uint128 {
 
 }
 
+// Validate and store a block
+// TODO: Validate signature and balance
 func StoreBlock(block blocks.Block) error {
 	conn := getConn()
 	defer releaseConn(conn)
@@ -246,6 +248,9 @@ func storeBlock(conn *badger.Txn, block blocks.Block) error {
 	return nil
 }
 
+// Store a block without checking whether it's valid
+// The block should be pre-checked to ensure it has a valid signature,
+// parent block, balance, etc.
 func uncheckedStoreBlock(conn *badger.Txn, block blocks.Block) {
 	var buf bytes.Buffer
 	var meta byte
