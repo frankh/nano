@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"time"
 )
 
 const packetSize = 512
@@ -13,6 +14,7 @@ const numberOfPeersToShare = 8
 var DefaultPeer = Peer{
 	net.ParseIP("::ffff:192.168.0.70"),
 	7075,
+	nil,
 }
 
 var PeerList = []Peer{DefaultPeer}
@@ -65,8 +67,11 @@ func SendKeepAlive(peer Peer) error {
 
 func SendKeepAlives(params []interface{}) {
 	peers := params[0].([]Peer)
+	timeCutoff := time.Now().Add(-5 * time.Minute)
+
 	for _, peer := range peers {
-		// TODO: Handle errors
-		SendKeepAlive(peer)
+		if peer.LastReachout == nil || peer.LastReachout.Before(timeCutoff) {
+			SendKeepAlive(peer)
+		}
 	}
 }
