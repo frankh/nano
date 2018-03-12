@@ -20,6 +20,25 @@ var DefaultPeer = Peer{
 var PeerList = []Peer{DefaultPeer}
 var PeerSet = map[string]bool{DefaultPeer.String(): true}
 
+func (p *Peer) SendMessage(m Message) error {
+	now := time.Now()
+	p.LastReachout = &now
+
+	outConn, err := net.DialUDP("udp", nil, p.Addr())
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.NewBuffer(nil)
+	err = m.Write(buf)
+	if err != nil {
+		return err
+	}
+	outConn.Write(buf.Bytes())
+
+	return nil
+}
+
 func ListenForUdp() {
 	log.Printf("Listening for udp packets on 7075")
 	ln, err := net.ListenPacket("udp", ":7075")
@@ -41,14 +60,7 @@ func ListenForUdp() {
 }
 
 func SendKeepAlive(peer Peer) error {
-	addr := peer.Addr()
 	randomPeers := make([]Peer, 0)
-
-	outConn, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		return err
-	}
-
 	randIndices := rand.Perm(len(PeerList))
 	for n, i := range randIndices {
 		if n == numberOfPeersToShare {
@@ -58,11 +70,7 @@ func SendKeepAlive(peer Peer) error {
 	}
 
 	m := CreateKeepAlive(randomPeers)
-	buf := bytes.NewBuffer(nil)
-	m.Write(buf)
-
-	outConn.Write(buf.Bytes())
-	return nil
+	return peer.SendMessage(m)
 }
 
 func SendKeepAlives(params []interface{}) {

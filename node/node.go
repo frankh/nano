@@ -76,6 +76,10 @@ type MessagePublish struct {
 	MessageBlock
 }
 
+type Message interface {
+	Write(buf *bytes.Buffer) error
+}
+
 func CreateKeepAlive(peers []Peer) *MessageKeepAlive {
 	var m MessageKeepAlive
 	m.MessageHeader.MagicNumber = MagicNumber
