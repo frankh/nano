@@ -15,10 +15,10 @@ import (
 	"github.com/frankh/crypto/ed25519"
 )
 
-// xrb uses a non-standard base32 character set.
-const EncodeXrb = "13456789abcdefghijkmnopqrstuwxyz"
+// nano uses a non-standard base32 character set.
+const EncodeNano = "13456789abcdefghijkmnopqrstuwxyz"
 
-var XrbEncoding = base32.NewEncoding(EncodeXrb)
+var NanoEncoding = base32.NewEncoding(EncodeNano)
 
 func ValidateAddress(account types.Account) bool {
 	_, err := AddressToPub(account)
@@ -28,19 +28,27 @@ func ValidateAddress(account types.Account) bool {
 
 func AddressToPub(account types.Account) (public_key []byte, err error) {
 	address := string(account)
-	// A valid xrb address is 64 bytes long
-	// First 4 are simply a hard-coded string xrb_ for ease of use
+
+	if address[:4] == "xrb_" {
+		address = address[4:]
+	} else if address[:5] == "nano_" {
+		address = address[5:]
+	} else {
+		return nil, errors.New("Invalid address format")
+	}
+	// A valid nano address is 64 bytes long
+	// First 5 are simply a hard-coded string nano_ for ease of use
 	// The following 52 characters form the address, and the final
 	// 8 are a checksum.
 	// They are base 32 encoded with a custom encoding.
-	if len(address) == 64 && address[:4] == "xrb_" {
-		// The xrb address string is 260bits which doesn't fall on a
+	if len(address) == 60 {
+		// The nano address string is 260bits which doesn't fall on a
 		// byte boundary. pad with zeros to 280bits.
-		// (zeros are encoded as 1 in xrb's 32bit alphabet)
-		key_b32xrb := "1111" + address[4:56]
-		input_checksum := address[56:]
+		// (zeros are encoded as 1 in nano's 32bit alphabet)
+		key_b32nano := "1111" + address[0:52]
+		input_checksum := address[52:]
 
-		key_bytes, err := XrbEncoding.DecodeString(key_b32xrb)
+		key_bytes, err := NanoEncoding.DecodeString(key_b32nano)
 		if err != nil {
 			return nil, err
 		}
@@ -48,8 +56,8 @@ func AddressToPub(account types.Account) (public_key []byte, err error) {
 		// 4 is unused as account is 256 bits.
 		key_bytes = key_bytes[3:]
 
-		// xrb checksum is calculated by hashing the key and reversing the bytes
-		valid := XrbEncoding.EncodeToString(GetAddressChecksum(key_bytes)) == input_checksum
+		// nano checksum is calculated by hashing the key and reversing the bytes
+		valid := NanoEncoding.EncodeToString(GetAddressChecksum(key_bytes)) == input_checksum
 		if valid {
 			return key_bytes, nil
 		} else {
@@ -75,10 +83,10 @@ func PubKeyToAddress(pub ed25519.PublicKey) types.Account {
 	// to encode properly.
 	// Pad the start with 0's and strip them off after base32 encoding
 	padded := append([]byte{0, 0, 0}, pub...)
-	address := XrbEncoding.EncodeToString(padded)[4:]
-	checksum := XrbEncoding.EncodeToString(GetAddressChecksum(pub))
+	address := NanoEncoding.EncodeToString(padded)[4:]
+	checksum := NanoEncoding.EncodeToString(GetAddressChecksum(pub))
 
-	return types.Account("xrb_" + address + checksum)
+	return types.Account("nano_" + address + checksum)
 }
 
 func KeypairFromPrivateKey(private_key string) (ed25519.PublicKey, ed25519.PrivateKey) {

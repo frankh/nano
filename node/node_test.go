@@ -136,7 +136,7 @@ func TestReadWriteMessagePublish(t *testing.T) {
 		t.Errorf("Work validation failed")
 	}
 
-	if block.Account != "xrb_14jyjetsh8p7jxx1of38ctsa779okt9d1pdnmtjpqiukuq8zugr3bxpxf1zu" {
+	if block.Account != "nano_14jyjetsh8p7jxx1of38ctsa779okt9d1pdnmtjpqiukuq8zugr3bxpxf1zu" {
 		t.Errorf("Deserialised account badly")
 	}
 }

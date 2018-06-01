@@ -63,5 +63,5 @@ Any pull requests would be welcome!
 
 I haven't been using Go for very long so any style/organisation fixes would be greatly appreciated.
 
-Feel free to donate some Nano to xrb_1frankh36p3e4cy4xrtj79d5rmcgce9wh4zke366gik19gifb5kxcnoju3y5 to help keep me motivated :beers:
+Feel free to donate some Nano to nano_1frankh36p3e4cy4xrtj79d5rmcgce9wh4zke366gik19gifb5kxcnoju3y5 to help keep me motivated :beers:
 
