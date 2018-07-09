@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"hash"
 	"strings"
 
 	"github.com/frankh/nano/address"
@@ -306,17 +306,22 @@ func ValidateWork(block_hash []byte, work []byte) bool {
 	if err != nil {
 		panic("Unable to create hash")
 	}
-	if len(work) != 8 {
-		panic("Bad work length")
-	}
+	return validateWork(hash, block_hash, work)
+}
 
-	hash.Write(work)
-	hash.Write(block_hash)
+func validateWork(digest hash.Hash, block []byte, work []byte) bool {
+	digest.Reset()
+	digest.Write(work)
+	digest.Write(block)
 
-	work_value := hash.Sum(nil)
-	work_value_int := binary.LittleEndian.Uint64(work_value)
+	sum := digest.Sum(nil)
+	return binary.LittleEndian.Uint64(sum) >= WorkThreshold
+}
 
-	return work_value_int >= WorkThreshold
+func validateNonce(digest hash.Hash, block []byte, nonce uint64) bool {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, nonce)
+	return validateWork(digest, block, b)
 }
 
 func ValidateBlockWork(b Block) bool {
@@ -329,28 +334,18 @@ func ValidateBlockWork(b Block) bool {
 
 func GenerateWorkForHash(b types.BlockHash) types.Work {
 	block_hash := b.ToBytes()
-	work := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	for {
-		if ValidateWork(block_hash, work) {
-			return types.Work(fmt.Sprintf("%x", utils.Reversed(work)))
-		}
-		incrementWork(work)
+	digest, err := blake2b.New(8, nil)
+	if err != nil {
+		panic("Unable to create hash")
 	}
+	var nonce uint64
+	for ; !validateNonce(digest, block_hash, nonce); nonce++ {
+	}
+	work := make([]byte, 8)
+	binary.BigEndian.PutUint64(work, nonce)
+	return types.Work(hex.EncodeToString(work))
 }
 
 func GenerateWork(b Block) types.Work {
 	return GenerateWorkForHash(b.Hash())
-}
-
-func incrementWork(work []byte) {
-	for i := 0; i < len(work)-1; i++ {
-		if work[i] < 255 {
-			work[i]++
-			return
-		} else {
-			work[i]++
-			incrementWork(work[i+1:])
-			return
-		}
-	}
 }
